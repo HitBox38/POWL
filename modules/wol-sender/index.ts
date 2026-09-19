@@ -1,6 +1,12 @@
 import WolSenderModule from './src/WolSenderModule';
 import type { SendMagicPacketOptions } from './src/WolSender.types';
 
+export function getWakeUnavailableReason(): string | null {
+  return WolSenderModule
+    ? null
+    : 'Wake requires an Android app build with Wake-on-LAN support.';
+}
+
 /**
  * Sends a Wake-on-LAN magic packet over UDP to port 9.
  *
@@ -15,6 +21,9 @@ export async function sendMagicPacket({
   macAddress,
   broadcastIp = '255.255.255.255',
 }: SendMagicPacketOptions): Promise<void> {
+  if (!WolSenderModule) {
+    throw new Error(getWakeUnavailableReason()!);
+  }
   return WolSenderModule.sendMagicPacket(macAddress, broadcastIp);
 }
 
