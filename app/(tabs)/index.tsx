@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, FlatList, SafeAreaView } from 'react-native';
+import { View, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { DeviceCard } from '@/components/device-card';
