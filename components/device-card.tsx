@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { View, Pressable, Alert } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,21 +41,41 @@ export function DeviceCard({ device }: DeviceCardProps) {
   const { setWakeStatus, removeDevice } = useDevicesStore();
   const statusConfig = STATUS_CONFIG[device.wakeStatus];
   const isSending = device.wakeStatus === 'sending';
+  const attemptId = useRef(0);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      attemptId.current += 1;
+      if (resetTimer.current !== null) clearTimeout(resetTimer.current);
+      const status = useDevicesStore.getState().devices.find((item) => item.id === device.id)?.wakeStatus;
+      if (status === 'sending' || status === 'success') setWakeStatus(device.id, 'idle');
+    };
+  }, [device.id, setWakeStatus]);
 
   const handleWake = async () => {
-    if (isSending) return;
+    if (useDevicesStore.getState().devices.find((item) => item.id === device.id)?.wakeStatus === 'sending') return;
+    const currentAttempt = ++attemptId.current;
+    if (resetTimer.current !== null) {
+      clearTimeout(resetTimer.current);
+      resetTimer.current = null;
+    }
     setWakeStatus(device.id, 'sending');
     try {
       await sendMagicPacket({
         macAddress: device.macAddress,
         broadcastIp: device.broadcastIp,
       });
+      if (currentAttempt !== attemptId.current) return;
       setWakeStatus(device.id, 'success');
       // Reset back to idle after 3 seconds
-      setTimeout(() => {
+      resetTimer.current = setTimeout(() => {
+        if (currentAttempt !== attemptId.current) return;
+        resetTimer.current = null;
         setWakeStatus(device.id, 'idle');
       }, 3000);
     } catch (err) {
+      if (currentAttempt !== attemptId.current) return;
       const message = err instanceof Error ? err.message : String(err);
       setWakeStatus(device.id, 'error', message);
     }
