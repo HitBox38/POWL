@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useDevicesStore, type Device, type WakeStatus } from '@/store/devices';
-import { sendMagicPacket } from '@/modules/wol-sender';
+import { getWakeUnavailableReason, sendMagicPacket } from '@/modules/wol-sender';
 import { cn } from '@/lib/cn';
 
 type DeviceCardProps = {
@@ -37,6 +37,7 @@ const STATUS_CONFIG: Record<
 };
 
 export function DeviceCard({ device }: DeviceCardProps) {
+  const wakeUnavailableReason = getWakeUnavailableReason();
   const { setWakeStatus, removeDevice } = useDevicesStore();
   const statusConfig = STATUS_CONFIG[device.wakeStatus];
   const isSending = device.wakeStatus === 'sending';
@@ -97,6 +98,11 @@ export function DeviceCard({ device }: DeviceCardProps) {
                   : statusConfig.label}
               </Text>
             ) : null}
+            {wakeUnavailableReason ? (
+              <Text className="text-xs text-muted-foreground mt-1.5">
+                {wakeUnavailableReason}
+              </Text>
+            ) : null}
           </View>
 
           {/* Actions */}
@@ -104,7 +110,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
             <Button
               size="sm"
               onPress={handleWake}
-              disabled={isSending}
+              disabled={isSending || wakeUnavailableReason !== null}
               className={cn(
                 'min-w-[80px]',
                 device.wakeStatus === 'success' && 'bg-primary/20 border border-primary',

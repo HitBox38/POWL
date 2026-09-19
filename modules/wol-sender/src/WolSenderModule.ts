@@ -1,7 +1,10 @@
-import { requireNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo-modules-core';
+import { Platform } from 'react-native';
 
 interface WolSenderNativeModule {
   sendMagicPacket(macAddress: string, broadcastIp: string): Promise<void>;
 }
 
-export default requireNativeModule<WolSenderNativeModule>('WolSender');
+export default Platform.OS === 'android'
+  ? requireOptionalNativeModule<WolSenderNativeModule>('WolSender')
+  : null;
