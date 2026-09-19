@@ -40,7 +40,8 @@
           }
         }
       ],
-      "./plugins/withWolSender.js"
+      "./plugins/withWolSender.js",
+      "./plugins/withAsyncStorageRepository.js"
     ],
     "experiments": {
       "typedRoutes": true,
