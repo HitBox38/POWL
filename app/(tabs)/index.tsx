@@ -13,6 +13,8 @@ import { AppearanceSettings } from '@/components/appearance-settings';
 import { DeviceTransferSheet } from '@/components/device-transfer-sheet';
 import { DeviceOrganizationSheet } from '@/components/device-organization-sheet';
 import { GroupWakeSheet } from '@/components/group-wake-sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Icon } from '@/components/ui/icon';
 
 export default function HomeScreen() {
   return <DeviceDataGate><HomeContent /></DeviceDataGate>;
@@ -29,6 +31,7 @@ function HomeContent() {
   const currentProfile = profiles.find((profile) => profile.id === activeProfileId);
   const [organizationOpen, setOrganizationOpen] = useState(false);
   const [groupWakeOpen, setGroupWakeOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const selectedGroup = groups.find((group) => group.id === filter);
   const activeFilter = filter === 'favorites' || selectedGroup ? filter : 'all';
@@ -44,6 +47,8 @@ function HomeContent() {
             Wake-on-LAN
           </Text>
         </View>
+        <View className="flex-row gap-2 items-center">
+        <Button variant="ghost" size="icon" accessibilityLabel="App settings and tools" onPress={() => setToolsOpen(true)}><Icon name="settings" size={24} /></Button>
         <Button
           size="sm"
           onPress={() => setAddSheetOpen(true)}
@@ -51,21 +56,27 @@ function HomeContent() {
         >
           <Text className="text-primary-foreground font-semibold text-sm">+ Add Device</Text>
         </Button>
+        </View>
       </View>
 
-      <View className="px-4 pt-3 flex-row flex-wrap justify-end gap-2">
-        <AppearanceSettings />
-        <Button variant="outline" onPress={() => setTransferOpen(true)}><Text>Transfer devices</Text></Button>
-      </View>
+      <Dialog open={toolsOpen} onOpenChange={setToolsOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Settings &amp; tools</DialogTitle></DialogHeader>
+          <AppearanceSettings />
+          <Button variant="outline" onPress={() => { setToolsOpen(false); setProfilesOpen(true); }}><Text>Network profiles</Text></Button>
+          <Button variant="outline" onPress={() => { setToolsOpen(false); setOrganizationOpen(true); }}><Text>Manage groups</Text></Button>
+          <Button variant="outline" onPress={() => { setToolsOpen(false); setTransferOpen(true); }}><Text>Transfer devices</Text></Button>
+        </DialogContent>
+      </Dialog>
       <DeviceTransferSheet open={transferOpen} onOpenChange={setTransferOpen} />
 
-      <View className="px-4 py-2 border-b border-border">
+      {profiles.length ? <View className="px-4 py-2 border-b border-border">
         <Button variant="ghost" onPress={() => setProfilesOpen(true)} accessibilityLabel="Manage network profiles">
           <Text>Networks · {currentProfile?.name ?? 'Choose current network'}</Text>
         </Button>
-      </View>
+      </View> : null}
       <NetworkProfilesSheet open={profilesOpen} onOpenChange={setProfilesOpen} />
-      <View className="px-4 pt-3 gap-2">
+      {devices.length ? <View className="px-4 pt-3 gap-2">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-2">
             {[{ id: 'all', name: 'All' }, { id: 'favorites', name: 'Favorites' }, ...groups].map((item) => (
@@ -74,10 +85,9 @@ function HomeContent() {
           </View>
         </ScrollView>
         <View className="flex-row flex-wrap gap-2">
-          <Button variant="ghost" className="min-h-12" onPress={() => setOrganizationOpen(true)}><Text>Manage groups</Text></Button>
           {selectedGroup ? <Button variant="outline" className="min-h-12" disabled={!visibleDevices.length} onPress={() => setGroupWakeOpen(true)}><Text>Wake group ({visibleDevices.length})</Text></Button> : null}
         </View>
-      </View>
+      </View> : null}
 
       {/* Device list */}
       {devices.length === 0 ? (
@@ -102,7 +112,7 @@ function HomeContent() {
           renderItem={({ item }) => <DeviceCard device={item} />}
           contentContainerClassName="px-4 pt-4 pb-8"
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={<Text className="text-center text-muted-foreground py-8">{activeFilter === 'favorites' ? 'No favorites yet. Mark a device as a favorite to find it here.' : 'No devices in this group. Use Organize on a device to add it.'}</Text>}
+          ListEmptyComponent={<Text className="text-center text-muted-foreground py-8">{activeFilter === 'favorites' ? 'No favorites yet. Mark a device as a favorite to find it here.' : 'No devices in this group. Open a device’s Details, then Organize device to add it.'}</Text>}
         />
       )}
 
