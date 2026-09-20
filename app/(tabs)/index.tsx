@@ -10,6 +10,7 @@ import { useNetworkProfilesStore } from '@/store/network-profiles';
 import { AddDeviceSheet } from '@/components/add-device-sheet';
 import { useDevicesStore } from '@/store/devices';
 import { AppearanceSettings } from '@/components/appearance-settings';
+import { WakeWidgetSettings } from '@/components/wake-widget-settings';
 import { DeviceTransferSheet } from '@/components/device-transfer-sheet';
 import { DeviceOrganizationSheet } from '@/components/device-organization-sheet';
 import { GroupWakeSheet } from '@/components/group-wake-sheet';
@@ -63,6 +64,7 @@ function HomeContent() {
         <DialogContent>
           <DialogHeader><DialogTitle>Settings &amp; tools</DialogTitle></DialogHeader>
           <AppearanceSettings />
+          <WakeWidgetSettings />
           <Button variant="outline" onPress={() => { setToolsOpen(false); setProfilesOpen(true); }}><Text>Network profiles</Text></Button>
           <Button variant="outline" onPress={() => { setToolsOpen(false); setOrganizationOpen(true); }}><Text>Manage groups</Text></Button>
           <Button variant="outline" onPress={() => { setToolsOpen(false); setTransferOpen(true); }}><Text>Transfer devices</Text></Button>
@@ -126,5 +128,6 @@ function HomeContent() {
     </SafeAreaView>
   );
 }
+
 
 
