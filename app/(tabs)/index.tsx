@@ -7,10 +7,12 @@ import { DeviceCard } from '@/components/device-card';
 import { AddDeviceSheet } from '@/components/add-device-sheet';
 import { useDevicesStore } from '@/store/devices';
 import { AppearanceSettings } from '@/components/appearance-settings';
+import { DeviceTransferSheet } from '@/components/device-transfer-sheet';
 
 export default function HomeScreen() {
   const { devices } = useDevicesStore();
   const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -31,9 +33,11 @@ export default function HomeScreen() {
         </Button>
       </View>
 
-      <View className="items-end px-3">
+      <View className="px-4 pt-3 flex-row flex-wrap justify-end gap-2">
         <AppearanceSettings />
+        <Button variant="outline" onPress={() => setTransferOpen(true)}><Text>Transfer devices</Text></Button>
       </View>
+      <DeviceTransferSheet open={transferOpen} onOpenChange={setTransferOpen} />
 
       {/* Device list */}
       {devices.length === 0 ? (
