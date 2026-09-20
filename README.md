@@ -1,4 +1,40 @@
-# POWL
+# POWL — Privacy-Oriented Wake-on-LAN
+
+POWL is an Android Wake-on-LAN app for waking computers on your local network. Save a computer's name, MAC address, and broadcast IP, then tap **Wake** to send a magic packet from your phone.
+
+Built with Expo, React Native, and TypeScript, with a Kotlin module for sending UDP packets. Device information stays in local storage; no account or backend is required.
+
+## Features
+
+- Add devices with a friendly name, MAC address, and IPv4 broadcast address.
+- Validate device details before saving, with support for colon- or hyphen-separated MAC addresses.
+- Keep your device list across app restarts using Zustand and AsyncStorage.
+- Send Wake-on-LAN packets with one tap and see sending, success, or error feedback.
+- Retry failed sends and remove saved devices with confirmation.
+
+**“Packet sent!” means the packet was sent, not that the computer is online.** POWL does not monitor device availability or confirm that a computer woke up.
+
+## Using POWL
+
+1. Enable Wake-on-LAN on the target computer in its firmware and network adapter settings, as supported by the hardware.
+2. Connect your Android phone to the same local network as the computer.
+3. Tap **+ Add Device** and enter:
+
+   | Field | Example | Description |
+   | --- | --- | --- |
+   | Device Name | `Gaming PC` | A label for your device list. |
+   | MAC Address | `AA:BB:CC:DD:EE:FF` | The MAC address of the target computer's network adapter. |
+   | Broadcast IP | `255.255.255.255` | Defaults to the local broadcast address. A subnet broadcast address can also be supplied. |
+
+4. Tap **Add Device**, then **Wake** on its card.
+
+For a `192.168.1.0/24` network, the subnet broadcast address is `192.168.1.255`. Use the address appropriate to your network's subnet mask; it does not always end in `.255`.
+
+The target computer must support waking from its current power state, and the network must allow broadcast traffic between the phone and computer. POWL has no internet relay or remote-access service.
+
+## Platform support and current status
+
+The native sender is implemented for **Android only**. It requires a native app build containing the `WolSender` module; Expo Go cannot provide that custom module. The starter project's iOS and web scripts remain in `package.json`, but packet sending is unavailable on those platforms.
 
 ## Install a development APK on Android
 
@@ -20,53 +56,60 @@ git push origin dev
 
 The workflow uses `npm ci` with `package-lock.json`; update that lockfile when changing dependencies.
 
-## Expo development
+## Development
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+### Prerequisites
 
-## Get started
+- Node.js 22 and npm (matching the APK workflow).
+- An Android development environment with Android Studio, the Android SDK, and a compatible JDK.
+- An Android device with USB debugging enabled for testing real Wake-on-LAN behavior on your network.
 
-1. Install dependencies
+### Install dependencies
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+npm ci --include=dev
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Build and run on Android
 
-## Learn more
+```sh
+npm run android
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+This runs `expo run:android` to build and install the native app. For later JavaScript development, start Metro with:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```sh
+npm start
+```
 
-## Join the community
+Native module changes require rebuilding the Android app.
 
-Join our community of developers creating universal apps.
+### Check the code
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```sh
+npm run lint
+npx tsc --noEmit
+```
+
+There is no unified test script in `package.json`; focused checks live in `scripts/`, `plugins/`, and the native module test directory. End-to-end wake behavior needs verification with an Android device and a Wake-on-LAN-capable computer on the same network.
+
+## How it works
+
+The device card starts a wake action in the Zustand store, which calls the TypeScript wrapper in `modules/wol-sender` and invokes the Kotlin `WolSender` Expo module. The module builds a 102-byte magic packet: six `0xFF` bytes followed by the target MAC address repeated 16 times. It sends the packet through a broadcast-enabled UDP socket to the configured IP on **port 9**. The port is currently fixed.
+
+The `withWolSender` Expo config plugin adds the Android `INTERNET` and `CHANGE_WIFI_MULTICAST_STATE` permissions. Saved device details are persisted locally under the `powl-devices` storage key; send status and errors reset when the app restarts.
+
+## Project structure
+
+| Path | Purpose |
+| --- | --- |
+| `app/` | Expo Router layouts and the device-list screen. |
+| `components/add-device-sheet.tsx` | Add-device form and validation. |
+| `components/device-card.tsx` | Device details, wake action, send feedback, and removal. |
+| `components/ui/` | Shared UI primitives styled with NativeWind. |
+| `store/devices.ts` | Zustand device state and AsyncStorage persistence. |
+| `modules/wol-sender/` | TypeScript API and Android Kotlin magic-packet sender. |
+| `plugins/withWolSender.js` | Android permissions config plugin used by Expo. |
+| `assets/images/` | App icons, splash assets, and branding. |
+
+The app uses Expo SDK 54, React Native 0.81, React 19, Expo Router, NativeWind, and Zustand.
