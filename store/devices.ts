@@ -1,30 +1,42 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sendMagicPacket } from '@/modules/wol-sender';
 
 export type WakeStatus = 'idle' | 'sending' | 'success' | 'error';
+
+export type WakeRequest = {
+  requestedAt: string;
+  result: 'sent' | 'failed';
+  macAddress: string;
+  broadcastIp: string;
+  error?: string;
+};
 
 export type Device = {
   id: string;
   name: string;
   macAddress: string;
   broadcastIp: string;
-  /** Transient — not persisted, resets on app restart */
+  /** Sending is transient; restart restores only the last completed result. */
   wakeStatus: WakeStatus;
   wakeError?: string;
+  /** The last completed send attempt. This does not confirm the computer woke. */
+  lastWakeRequest?: WakeRequest;
 };
 
 type DevicesState = {
   devices: Device[];
-  addDevice: (device: Omit<Device, 'id' | 'wakeStatus' | 'wakeError'>) => void;
+  addDevice: (device: Omit<Device, 'id' | 'wakeStatus' | 'wakeError' | 'lastWakeRequest'>) => void;
   removeDevice: (id: string) => void;
   updateDevice: (id: string, updates: Partial<Pick<Device, 'name' | 'macAddress' | 'broadcastIp'>>) => void;
   setWakeStatus: (id: string, status: WakeStatus, error?: string) => void;
+  wakeDevice: (id: string) => Promise<void>;
 };
 
 export const useDevicesStore = create<DevicesState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       devices: [],
 
       addDevice: (device) =>
@@ -59,15 +71,53 @@ export const useDevicesStore = create<DevicesState>()(
               : d
           ),
         })),
+
+      wakeDevice: async (id) => {
+        const device = get().devices.find((item) => item.id === id);
+        if (!device || device.wakeStatus === 'sending') return;
+
+        const destination = {
+          macAddress: device.macAddress,
+          broadcastIp: device.broadcastIp,
+        };
+        const requestedAt = new Date().toISOString();
+        get().setWakeStatus(id, 'sending');
+
+        let request: WakeRequest;
+        try {
+          await sendMagicPacket(destination);
+          request = { ...destination, requestedAt, result: 'sent' };
+        } catch (error) {
+          request = {
+            ...destination,
+            requestedAt,
+            result: 'failed',
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+
+        // Finish even if the card scrolls off screen; removed devices stay removed.
+        set((state) => ({
+          devices: state.devices.map((item) => item.id === id ? {
+            ...item,
+            wakeStatus: request.result === 'sent' ? 'success' : 'error',
+            wakeError: request.error,
+            lastWakeRequest: request,
+          } : item),
+        }));
+      },
     }),
     {
       name: 'powl-devices',
       storage: createJSONStorage(() => AsyncStorage),
-      // Only persist the device list, not transient wake status
+      // A restart never restores an in-flight send. Keep the completed result.
       partialize: (state) => ({
         devices: state.devices.map(({ wakeStatus: _ws, wakeError: _we, ...rest }) => ({
           ...rest,
-          wakeStatus: 'idle' as WakeStatus,
+          wakeStatus: (rest.lastWakeRequest?.result === 'sent'
+            ? 'success'
+            : rest.lastWakeRequest?.result === 'failed' ? 'error' : 'idle') as WakeStatus,
+          wakeError: rest.lastWakeRequest?.error,
         })),
       }),
     }

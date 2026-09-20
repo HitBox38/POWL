@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useDevicesStore, type Device, type WakeStatus } from '@/store/devices';
-import { getWakeUnavailableReason, sendMagicPacket } from '@/modules/wol-sender';
+import { getWakeUnavailableReason } from '@/modules/wol-sender';
 import { DeviceDetailsSheet } from '@/components/device-details-sheet';
 import { cn } from '@/lib/cn';
 
@@ -27,7 +27,7 @@ const STATUS_CONFIG: Record<
     buttonLabel: 'Sending...',
   },
   success: {
-    label: 'Packet sent!',
+    label: 'Wake request sent',
     color: 'text-primary',
     buttonLabel: 'Wake',
   },
@@ -40,49 +40,11 @@ const STATUS_CONFIG: Record<
 
 export function DeviceCard({ device }: DeviceCardProps) {
   const wakeUnavailableReason = getWakeUnavailableReason();
-  const { setWakeStatus } = useDevicesStore();
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const wakeDevice = useDevicesStore((state) => state.wakeDevice);
   const statusConfig = STATUS_CONFIG[device.wakeStatus];
   const isSending = device.wakeStatus === 'sending';
-  const attemptId = useRef(0);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      attemptId.current += 1;
-      if (resetTimer.current !== null) clearTimeout(resetTimer.current);
-      const status = useDevicesStore.getState().devices.find((item) => item.id === device.id)?.wakeStatus;
-      if (status === 'sending' || status === 'success') setWakeStatus(device.id, 'idle');
-    };
-  }, [device.id, setWakeStatus]);
-
-  const handleWake = async () => {
-    if (useDevicesStore.getState().devices.find((item) => item.id === device.id)?.wakeStatus === 'sending') return;
-    const currentAttempt = ++attemptId.current;
-    if (resetTimer.current !== null) {
-      clearTimeout(resetTimer.current);
-      resetTimer.current = null;
-    }
-    setWakeStatus(device.id, 'sending');
-    try {
-      await sendMagicPacket({
-        macAddress: device.macAddress,
-        broadcastIp: device.broadcastIp,
-      });
-      if (currentAttempt !== attemptId.current) return;
-      setWakeStatus(device.id, 'success');
-      // Reset back to idle after 3 seconds
-      resetTimer.current = setTimeout(() => {
-        if (currentAttempt !== attemptId.current) return;
-        resetTimer.current = null;
-        setWakeStatus(device.id, 'idle');
-      }, 3000);
-    } catch (err) {
-      if (currentAttempt !== attemptId.current) return;
-      const message = err instanceof Error ? err.message : String(err);
-      setWakeStatus(device.id, 'error', message);
-    }
-  };
+  const handleWake = () => { void wakeDevice(device.id); };
 
   return (
     <Card className="mb-3 border-border bg-card">
@@ -100,10 +62,21 @@ export function DeviceCard({ device }: DeviceCardProps) {
               {device.broadcastIp}
             </Text>
             {statusConfig.label ? (
-              <Text className={cn('text-xs mt-1.5 font-medium', statusConfig.color)}>
+              <Text accessibilityLiveRegion="polite" className={cn('text-xs mt-1.5 font-medium', statusConfig.color)}>
                 {device.wakeStatus === 'error' && device.wakeError
                   ? device.wakeError
                   : statusConfig.label}
+              </Text>
+            ) : null}
+            {device.lastWakeRequest ? (
+              <Text className="text-xs text-muted-foreground mt-1.5">
+                Last request {device.lastWakeRequest.result === 'sent' ? 'sent' : 'failed'}: {'\n'}
+                {new Date(device.lastWakeRequest.requestedAt).toLocaleString()}
+              </Text>
+            ) : null}
+            {device.lastWakeRequest?.result === 'sent' ? (
+              <Text className="text-xs text-muted-foreground mt-1.5">
+                Sending a request does not confirm the computer is awake.
               </Text>
             ) : null}
             {wakeUnavailableReason ? (
