@@ -4,12 +4,12 @@ const NAV_THEME = {
   light: {
     dark: false,
     colors: {
-      primary: 'hsl(199, 89%, 55%)',
-      background: 'hsl(222, 47%, 11%)',
-      card: 'hsl(222, 47%, 14%)',
-      text: 'hsl(213, 31%, 91%)',
-      border: 'hsl(222, 47%, 22%)',
-      notification: 'hsl(0, 85%, 76%)',
+      primary: 'hsl(199, 89%, 30%)',
+      background: 'hsl(210, 40%, 98%)',
+      card: 'hsl(0, 0%, 100%)',
+      text: 'hsl(222, 47%, 11%)',
+      border: 'hsl(214, 25%, 78%)',
+      notification: 'hsl(0, 72%, 36%)',
     },
     fonts: {
       regular: { fontFamily: 'System', fontWeight: '400' as const },
