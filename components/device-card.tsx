@@ -7,6 +7,7 @@ import { useDevicesStore, type Device, type WakeStatus } from '@/store/devices';
 import { getWakeUnavailableReason } from '@/modules/wol-sender';
 import { DeviceDetailsSheet } from '@/components/device-details-sheet';
 import { cn } from '@/lib/cn';
+import { TroubleshootSheet } from '@/components/troubleshoot-sheet';
 
 type DeviceCardProps = {
   device: Device;
@@ -39,6 +40,7 @@ const STATUS_CONFIG: Record<
 };
 
 export function DeviceCard({ device }: DeviceCardProps) {
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const wakeUnavailableReason = getWakeUnavailableReason();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const wakeDevice = useDevicesStore((state) => state.wakeDevice);
@@ -63,9 +65,12 @@ export function DeviceCard({ device }: DeviceCardProps) {
             </Text>
             {statusConfig.label ? (
               <Text accessibilityLiveRegion="polite" className={cn('text-xs mt-1.5 font-medium', statusConfig.color)}>
-                {device.wakeStatus === 'error' && device.wakeError
-                  ? device.wakeError
-                  : statusConfig.label}
+                {statusConfig.label}
+              </Text>
+            ) : null}
+            {device.wakeStatus === 'error' ? (
+              <Text className="text-xs text-muted-foreground mt-1.5">
+                POWL couldn&apos;t send this request. Check your connection and saved network settings, then retry.
               </Text>
             ) : null}
             {device.lastWakeRequest ? (
@@ -118,6 +123,22 @@ export function DeviceCard({ device }: DeviceCardProps) {
             </Pressable>
           </View>
         </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Troubleshoot waking ${device.name}`}
+          onPress={() => setShowTroubleshooting(true)}
+          className="min-h-12 justify-center mt-1 active:opacity-60"
+        >
+          <Text className="text-sm text-primary">Troubleshoot</Text>
+        </Pressable>
+        {showTroubleshooting ? (
+          <TroubleshootSheet
+            device={device}
+            open={showTroubleshooting}
+            onOpenChange={setShowTroubleshooting}
+            onRetry={handleWake}
+          />
+        ) : null}
       </CardContent>
       <DeviceDetailsSheet device={device} open={detailsOpen} onOpenChange={setDetailsOpen} />
     </Card>
