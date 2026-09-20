@@ -97,6 +97,8 @@ export function DeviceCard({ device }: DeviceCardProps) {
               size="sm"
               onPress={handleWake}
               disabled={isSending || wakeUnavailableReason !== null}
+              accessibilityLabel={`${statusConfig.buttonLabel} ${device.name}`}
+              accessibilityState={{ disabled: isSending || wakeUnavailableReason !== null, busy: isSending }}
               className={cn(
                 'min-w-[80px]',
                 device.wakeStatus === 'success' && 'bg-primary/20 border border-primary',
@@ -117,7 +119,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
             </Button>
             <Pressable
               onPress={() => setDetailsOpen(true)} accessibilityRole="button" accessibilityLabel={`Details for ${device.name}`}
-              className="items-center justify-center rounded-md py-1 px-2 active:opacity-60"
+              className="min-h-12 min-w-12 items-center justify-center rounded-md py-3 px-2 active:opacity-60"
             >
               <Text className="text-xs text-muted-foreground">Details</Text>
             </Pressable>
@@ -144,4 +146,5 @@ export function DeviceCard({ device }: DeviceCardProps) {
     </Card>
   );
 }
+
 
