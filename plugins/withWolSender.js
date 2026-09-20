@@ -29,6 +29,18 @@ const withWolSender = (config) => {
       }
     }
 
+    const application = manifest.application?.[0];
+    if (!application) throw new Error('Wake widget requires an Android application manifest.');
+    application.receiver ??= [];
+    const receiverName = 'expo.modules.wolsender.WakeWidgetProvider';
+    if (!application.receiver.some((receiver) => receiver.$?.['android:name'] === receiverName)) {
+      application.receiver.push({
+        $: { 'android:name': receiverName, 'android:exported': 'false', 'android:label': '@string/powl_widget_label' },
+        'intent-filter': [{ action: [{ $: { 'android:name': 'android.appwidget.action.APPWIDGET_UPDATE' } }] }],
+        'meta-data': [{ $: { 'android:name': 'android.appwidget.provider', 'android:resource': '@xml/powl_wake_widget' } }],
+      });
+    }
+
     return modConfig;
   });
 };

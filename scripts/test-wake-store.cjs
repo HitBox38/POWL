@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
@@ -6,7 +7,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 
 // Exercise the actual Zustand/persist store with only native I/O substituted.
-async function createStore(sender, saved) {
+async function createStore(sender, saved, network = { profiles: [], activeProfileId: null }) {
   const storage = new Map(saved ? [['powl-devices', saved]] : []);
   const output = ts.transpileModule(
     readFileSync(path.join(__dirname, '../store/devices.ts'), 'utf8'),
@@ -17,6 +18,13 @@ async function createStore(sender, saved) {
     exports, Date, Error, String,
     require: (name) => {
       if (name === '@/modules/wol-sender') return { sendMagicPacket: sender };
+      if (name === '@/store/network-profiles') return { useNetworkProfilesStore: { getState: () => network, persist: { hasHydrated: () => true } } };
+      if (name === '@/lib/network-profiles') {
+        const networkExports = {};
+        const code = ts.transpileModule(readFileSync(path.join(__dirname, '../lib/network-profiles.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+        vm.runInNewContext(code, { exports: networkExports });
+        return networkExports;
+      }
       if (name === '@react-native-async-storage/async-storage') return {
         getItem: async (key) => storage.get(key) ?? null,
         setItem: async (key, value) => { storage.set(key, value); },
@@ -31,6 +39,19 @@ async function createStore(sender, saved) {
 }
 
 const device = { id: 'computer', name: 'Computer', macAddress: 'AA:BB:CC:DD:EE:FF', broadcastIp: '255.255.255.255', wakeStatus: 'idle' };
+
+test('profile destinations are sent and recorded; mismatched networks do not send', async () => {
+  const destinations = [];
+  const network = { profiles: [{ id: 'home', name: 'Home', broadcastIp: '192.168.4.255' }], activeProfileId: 'home' };
+  const { store } = await createStore(async value => { destinations.push(value); }, undefined, network);
+  store.setState({ devices: [{ ...device, networkProfileId: 'home' }] });
+  await store.getState().wakeDevice(device.id);
+  assert.equal(destinations[0].broadcastIp, '192.168.4.255');
+  assert.equal(store.getState().devices[0].lastWakeRequest.broadcastIp, '192.168.4.255');
+  network.activeProfileId = null;
+  await store.getState().wakeDevice(device.id);
+  assert.equal(destinations.length, 1);
+});
 
 test('successful sends persist their timestamp and destination across restart', async () => {
   const { store, storage } = await createStore(async () => {});
@@ -124,4 +145,108 @@ test('clearing history persists and does not cancel an in-flight send', async ()
   finish();
   await pending;
   assert.equal(store.getState().devices[0].wakeHistory.length, 1);
+});
+
+test('favorites and group assignments survive restart; group removal preserves devices', async () => {
+  const { store, storage } = await createStore(async () => {});
+  store.setState({ devices: [{ ...device }] });
+  assert.equal(store.getState().addGroup(' Studio '), true);
+  assert.equal(store.getState().addGroup('studio'), false);
+  const groupId = store.getState().groups[0].id;
+  store.getState().toggleFavorite(device.id);
+  store.getState().assignGroup(device.id, groupId);
+  assert.equal(store.getState().renameGroup(groupId, 'Office'), true);
+  assert.equal(store.getState().groups[0].id, groupId);
+  const restarted = await createStore(async () => {}, storage.get('powl-devices'));
+  assert.equal(restarted.store.getState().devices[0].isFavorite, true);
+  assert.equal(restarted.store.getState().devices[0].groupId, groupId);
+  assert.equal(restarted.store.getState().groups[0].name, 'Office');
+  restarted.store.getState().removeGroup(groupId);
+  assert.equal(restarted.store.getState().devices.length, 1);
+  assert.equal(restarted.store.getState().devices[0].groupId, undefined);
+  assert.equal(restarted.store.getState().devices[0].isFavorite, true);
+});
+
+test('legacy device storage defaults to no groups and invalid group assignments are ignored', async () => {
+  const { store } = await createStore(async () => {}, JSON.stringify({ state: { devices: [device] }, version: 0 }));
+  assert.equal(store.getState().groups.length, 0);
+  assert.equal(store.getState().devices[0].isFavorite, undefined);
+  store.getState().assignGroup(device.id, 'missing');
+  assert.equal(store.getState().devices[0].groupId, undefined);
+  assert.equal(store.getState().addGroup('   '), false);
+  assert.equal(store.getState().addGroup('a'.repeat(41)), false);
+});
+
+test('group wake reports sent, failed, skipped and leaves nonmembers alone', async () => {
+  let sends = 0;
+  const { store } = await createStore(async (destination) => {
+    sends++;
+    if (destination.broadcastIp === '192.168.2.255') throw new Error('unreachable');
+  });
+  store.setState({
+    groups: [{ id: 'studio', name: 'Studio' }],
+    devices: [
+      { ...device, groupId: 'studio' },
+      { ...device, id: 'failed', broadcastIp: '192.168.2.255', groupId: 'studio' },
+      { ...device, id: 'busy', wakeStatus: 'sending', groupId: 'studio' },
+      { ...device, id: 'outside' },
+    ],
+  });
+  const result = await store.getState().wakeGroup('studio');
+  assert.equal(result.sent, 1);
+  assert.equal(result.failed, 1);
+  assert.equal(result.skipped, 1);
+  assert.equal(sends, 2);
+  assert.equal(store.getState().devices.find((item) => item.id === 'outside').wakeStatus, 'idle');
+  assert.equal(store.getState().devices.find((item) => item.id === 'busy').wakeStatus, 'sending');
+  const missing = await store.getState().wakeGroup('removed');
+  assert.equal(missing.sent + missing.failed + missing.skipped, 0);
+});
+
+test('overlapping group wakes do not send duplicate packets', async () => {
+  const finish = [];
+  const { store } = await createStore(() => new Promise((resolve) => { finish.push(resolve); }));
+  store.setState({
+    groups: [{ id: 'studio', name: 'Studio' }],
+    devices: [{ ...device, groupId: 'studio' }, { ...device, id: 'second', groupId: 'studio' }],
+  });
+  const first = store.getState().wakeGroup('studio');
+  const overlapping = await store.getState().wakeGroup('studio');
+  assert.equal(overlapping.sent, 0);
+  assert.equal(overlapping.skipped, 2);
+  assert.equal(finish.length, 2);
+  finish.forEach((resolve) => resolve());
+  assert.equal((await first).sent, 2);
+  assert.equal(store.getState().devices[0].wakeHistory.length, 1);
+});
+
+test('editing and ungrouping during a send preserves edits and records the original destination', async () => {
+  let finish;
+  const { store } = await createStore(() => new Promise((resolve) => { finish = resolve; }));
+  store.setState({ groups: [{ id: 'studio', name: 'Studio' }], devices: [{ ...device, groupId: 'studio' }] });
+  const pending = store.getState().wakeGroup('studio');
+  store.getState().updateDevice(device.id, { name: 'Renamed', macAddress: '11:22:33:44:55:66', broadcastIp: '192.168.5.255' });
+  store.getState().removeGroup('studio');
+  finish();
+  assert.equal((await pending).sent, 1);
+  const current = store.getState().devices[0];
+  assert.equal(current.name, 'Renamed');
+  assert.equal(current.macAddress, '11:22:33:44:55:66');
+  assert.equal(current.broadcastIp, '192.168.5.255');
+  assert.equal(current.groupId, undefined);
+  assert.equal(current.lastWakeRequest.macAddress, device.macAddress);
+  assert.equal(current.lastWakeRequest.broadcastIp, device.broadcastIp);
+});
+
+test('removing a group member during send does not recreate it or misreport packet outcome', async () => {
+  let finish;
+  const { store } = await createStore(() => new Promise((resolve) => { finish = resolve; }));
+  store.setState({ groups: [{ id: 'studio', name: 'Studio' }], devices: [{ ...device, groupId: 'studio' }] });
+  const pending = store.getState().wakeGroup('studio');
+  store.getState().removeDevice(device.id);
+  finish();
+  const result = await pending;
+  assert.equal(result.sent, 1);
+  assert.equal(result.skipped, 0);
+  assert.equal(store.getState().devices.length, 0);
 });

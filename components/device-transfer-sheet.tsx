@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useDevicesStore } from '@/store/devices';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
+import { resolveBroadcastIp } from '@/lib/network-profiles';
 import { createDeviceBackupBatches, createDeviceQr, parseDeviceTransfer, planDeviceImport, type TransferDevice } from '@/lib/device-transfer';
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
@@ -20,6 +22,8 @@ export function DeviceTransferSheet({ open, onOpenChange }: Props) {
 
 function TransferContent() {
   const devices = useDevicesStore(state => state.devices);
+  const profiles = useNetworkProfilesStore(state => state.profiles);
+  const transferDevices = useMemo(() => devices.map(device => ({ ...device, broadcastIp: resolveBroadcastIp(device, profiles) })), [devices, profiles]);
   const [source, setSource] = useState('');
   const [preview, setPreview] = useState<TransferDevice[] | null>(null);
   const [notice, setNotice] = useState('');
@@ -29,15 +33,15 @@ function TransferContent() {
   const [permission, requestPermission] = useCameraPermissions();
   const scanned = useRef(false);
   const backup = useMemo(() => {
-    try { return { batches: createDeviceBackupBatches(devices), error: '' }; }
+    try { return { batches: createDeviceBackupBatches(transferDevices), error: '' }; }
     catch (error) { return { batches: [], error: error instanceof Error ? error.message : 'Unable to export these devices.' }; }
-  }, [devices]);
+  }, [transferDevices]);
   const selectedBatchIndex = Math.min(batchIndex, Math.max(backup.batches.length - 1, 0));
   const selectedBatch = backup.batches[selectedBatchIndex];
   const qr = useMemo(() => {
-    const device = devices.find(item => item.id === selectedId);
+    const device = transferDevices.find(item => item.id === selectedId);
     return device ? createDeviceQr(device) : { image: null, error: '' };
-  }, [devices, selectedId]);
+  }, [transferDevices, selectedId]);
   const plan = preview ? planDeviceImport(preview, devices) : null;
 
   const inspect = (text: string) => {
@@ -114,4 +118,5 @@ function TransferContent() {
     {notice ? <Text accessibilityLiveRegion="polite" className="text-sm">{notice}</Text> : null}
   </ScrollView>;
 }
+
 
