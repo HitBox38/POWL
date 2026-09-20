@@ -11,6 +11,7 @@ import { DeviceDetailsSheet } from '@/components/device-details-sheet';
 import { cn } from '@/lib/cn';
 import { TroubleshootSheet } from '@/components/troubleshoot-sheet';
 import { WakeHistorySheet } from '@/components/wake-history-sheet';
+import { DeviceOrganizationSheet } from '@/components/device-organization-sheet';
 
 type DeviceCardProps = {
   device: Device;
@@ -45,6 +46,8 @@ const STATUS_CONFIG: Record<
 export function DeviceCard({ device }: DeviceCardProps) {
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showOrganization, setShowOrganization] = useState(false);
+  const toggleFavorite = useDevicesStore((state) => state.toggleFavorite);
   const wakeUnavailableReason = getWakeUnavailableReason();
   const { profiles, activeProfileId } = useNetworkProfilesStore();
   const networkMismatch = getNetworkMismatch(device, profiles, activeProfileId);
@@ -100,6 +103,13 @@ export function DeviceCard({ device }: DeviceCardProps) {
 
           {/* Actions */}
           <View className="gap-2">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${device.isFavorite ? 'Remove' : 'Add'} ${device.name} ${device.isFavorite ? 'from' : 'to'} favorites`}
+              accessibilityState={{ selected: !!device.isFavorite }}
+              onPress={() => toggleFavorite(device.id)}
+              className="min-h-12 items-center justify-center"
+            ><Text className="text-sm text-primary">{device.isFavorite ? '★ Favorite' : '☆ Favorite'}</Text></Pressable>
             <Button
               size="sm"
               onPress={handleWake}
@@ -149,6 +159,12 @@ export function DeviceCard({ device }: DeviceCardProps) {
           >
             <Text className="text-sm text-primary">Wake history</Text>
           </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Organize ${device.name}`}
+            onPress={() => setShowOrganization(true)}
+            className="min-h-12 justify-center mt-1 active:opacity-60"
+          ><Text className="text-sm text-primary">Organize</Text></Pressable>
         </View>
         {showTroubleshooting ? (
           <TroubleshootSheet
@@ -161,6 +177,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
         {showHistory ? (
           <WakeHistorySheet device={device} open={showHistory} onOpenChange={setShowHistory} />
         ) : null}
+        {showOrganization ? <DeviceOrganizationSheet device={device} open={showOrganization} onOpenChange={setShowOrganization} /> : null}
       </CardContent>
       <DeviceDetailsSheet device={device} open={detailsOpen} onOpenChange={setDetailsOpen} />
     </Card>
