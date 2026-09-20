@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -45,21 +45,21 @@ export function WakeHistorySheet({ device, open, onOpenChange }: WakeHistoryShee
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border rounded-2xl max-h-[85%]">
-        <DialogHeader className="pr-6">
+      <DialogContent className="bg-card border-border rounded-2xl">
+        <DialogHeader>
           <DialogTitle>Wake history</DialogTitle>
           <DialogDescription>{device.name}</DialogDescription>
         </DialogHeader>
         <Text className="text-sm text-muted-foreground">
           The latest {WAKE_HISTORY_LIMIT} completed requests are kept on this phone. A sent request does not confirm that the computer woke up.
         </Text>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <View>
           <View className="gap-3">
             {history.length ? history.map((request, index) => (
               <HistoryEntry key={`${request.requestedAt}-${index}`} request={request} />
             )) : <Text className="text-sm text-muted-foreground py-6">No completed wake requests yet.</Text>}
           </View>
-        </ScrollView>
+        </View>
         {history.length ? (
           confirmClear ? (
             <View className="gap-3">

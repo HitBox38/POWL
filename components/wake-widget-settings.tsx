@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -42,7 +42,7 @@ export function WakeWidgetSettings() {
           </DialogHeader>
           {unavailable ? <Text className="text-sm text-muted-foreground">{unavailable}</Text> : (
             <>
-              <ScrollView className="max-h-64">
+              <View>
                 <View accessibilityRole="radiogroup" className="gap-2">
                   {[{ id: null, name: 'No device' }, ...devices].map((device) => (
                     <Pressable
@@ -57,7 +57,7 @@ export function WakeWidgetSettings() {
                     </Pressable>
                   ))}
                 </View>
-              </ScrollView>
+              </View>
               <Text className="text-sm text-muted-foreground">The widget uses this device’s saved network destination. Connect to that network before waking; the widget does not detect your connection. Its last result is shown on the widget, separately from app history. A sent request does not confirm that the computer woke.</Text>
               <Button disabled={!selected || pinning || !!syncError} onPress={addWidget}><Text>{pinning ? 'Opening launcher…' : 'Add to home screen'}</Text></Button>
             </>
