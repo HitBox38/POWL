@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { DeviceCard } from '@/components/device-card';
 import { AddDeviceSheet } from '@/components/add-device-sheet';
 import { useDevicesStore } from '@/store/devices';
+import { AppearanceSettings } from '@/components/appearance-settings';
 
 export default function HomeScreen() {
   const { devices } = useDevicesStore();
@@ -28,6 +29,10 @@ export default function HomeScreen() {
         >
           <Text className="text-primary-foreground font-semibold text-sm">+ Add Device</Text>
         </Button>
+      </View>
+
+      <View className="items-end px-3">
+        <AppearanceSettings />
       </View>
 
       {/* Device list */}
