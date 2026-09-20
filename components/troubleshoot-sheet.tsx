@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -20,12 +20,12 @@ export function TroubleshootSheet({ device, open, onOpenChange, onRetry }: Troub
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border rounded-2xl max-h-[85%]">
-        <DialogHeader className="pr-6">
+      <DialogContent className="bg-card border-border rounded-2xl">
+        <DialogHeader>
           <DialogTitle>Troubleshoot wake</DialogTitle>
           <DialogDescription>{device.name}</DialogDescription>
         </DialogHeader>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <View>
           <View className="gap-4">
             <Text className="text-sm text-muted-foreground">
               A sent request only confirms that POWL handed the packet to the network. It cannot confirm that the computer received it or woke up.
@@ -77,7 +77,7 @@ export function TroubleshootSheet({ device, open, onOpenChange, onRetry }: Troub
               </View>
             ) : null}
           </View>
-        </ScrollView>
+        </View>
         <Button
           className="min-h-12"
           disabled={device.wakeStatus === 'sending' || unavailableReason !== null}

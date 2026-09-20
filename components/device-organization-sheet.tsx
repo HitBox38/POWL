@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
@@ -47,12 +47,12 @@ export function DeviceOrganizationSheet({ device, open, onOpenChange }: DeviceOr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border rounded-2xl max-h-[85%]">
-        <DialogHeader className="pr-6">
+      <DialogContent className="bg-card border-border rounded-2xl">
+        <DialogHeader>
           <DialogTitle>{device ? 'Organize device' : 'Manage groups'}</DialogTitle>
           <DialogDescription>{device?.name ?? 'Group computers you usually wake together.'}</DialogDescription>
         </DialogHeader>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <View>
           <View className="gap-4">
             {device ? (
               <View className="gap-2">
@@ -76,7 +76,7 @@ export function DeviceOrganizationSheet({ device, open, onOpenChange }: DeviceOr
             {groups.length ? <Text className="font-semibold">Manage groups</Text> : null}
             {groups.map((group) => <GroupEditor key={group.id} group={group} />)}
           </View>
-        </ScrollView>
+        </View>
       </DialogContent>
     </Dialog>
   );

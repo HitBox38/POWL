@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, TextInput } from 'react-native';
+import { View, Platform, TextInput } from 'react-native';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useNetworkProfilesStore } from '@/store/network-profiles';
 import { SetupGuide } from '@/components/setup-guide';
@@ -31,7 +31,6 @@ function DeviceForm({ open, onOpenChange, device }: DeviceEditorSheetProps) {
   const profiles = useNetworkProfilesStore((state) => state.profiles);
   const [networkProfileId, setNetworkProfileId] = useState(device?.networkProfileId);
   const selectedProfile = profiles.find((profile) => profile.id === networkProfileId);
-  const { height } = useWindowDimensions();
   const macInput = useRef<TextInput>(null);
   const ipInput = useRef<TextInput>(null);
   const effectiveFields = { ...fields, broadcastIp: selectedProfile?.broadcastIp ?? fields.broadcastIp };
@@ -58,53 +57,49 @@ function DeviceForm({ open, onOpenChange, device }: DeviceEditorSheetProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border mx-4 rounded-2xl">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={{ maxHeight: height * 0.7 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
-            <DialogHeader className="mb-4 pr-6">
-              <DialogTitle className="text-foreground text-xl font-bold">{device ? 'Edit Device' : 'Add Device'}</DialogTitle>
-              <DialogDescription>Wake a computer on your local network. Internet wake requires additional network configuration.</DialogDescription>
-            </DialogHeader>
-            {!device ? <SetupGuide /> : null}
-            <View className="mb-4">
-              <Label className="text-foreground mb-1.5" nativeID="name-label">Device Name</Label>
-              <Input value={fields.name} onChangeText={(value) => change('name', value)} placeholder="e.g. Gaming PC"
-                className="bg-secondary border-border text-foreground" accessibilityLabel="Device name" accessibilityLabelledBy="name-label"
-                autoCapitalize="words" autoCorrect={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => macInput.current?.focus()} aria-invalid={!!errors.name} />
-              {errors.name ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.name}</Text> : null}
+      <DialogContent className="bg-card border-border rounded-2xl">        <View>
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-foreground text-xl font-bold">{device ? 'Edit Device' : 'Add Device'}</DialogTitle>
+            <DialogDescription>Wake a computer on your local network. Internet wake requires additional network configuration.</DialogDescription>
+          </DialogHeader>
+          {!device ? <SetupGuide /> : null}
+          <View className="mb-4">
+            <Label className="text-foreground mb-1.5" nativeID="name-label">Device Name</Label>
+            <Input value={fields.name} onChangeText={(value) => change('name', value)} placeholder="e.g. Gaming PC"
+              className="bg-secondary border-border text-foreground" accessibilityLabel="Device name" accessibilityLabelledBy="name-label"
+              autoCapitalize="words" autoCorrect={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => macInput.current?.focus()} aria-invalid={!!errors.name} />
+            {errors.name ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.name}</Text> : null}
+          </View>
+          <View className="mb-4">
+            <Label className="text-foreground mb-1.5" nativeID="mac-label">MAC Address</Label>
+            <Input ref={macInput} value={fields.macAddress} onChangeText={(value) => change('macAddress', value)} onBlur={() => change('macAddress', normalizeMac(fields.macAddress))}
+              placeholder="AA:BB:CC:DD:EE:FF" autoCapitalize="characters" autoCorrect={false} spellCheck={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => advancedOpen && !selectedProfile ? ipInput.current?.focus() : handleAdd()}
+              className="bg-secondary border-border text-foreground font-mono" accessibilityLabel="MAC address" accessibilityLabelledBy="mac-label" aria-invalid={!!errors.macAddress} />
+            {errors.macAddress ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.macAddress}</Text> : null}
+          </View>
+          <Button variant="ghost" className="mb-2 items-start" accessibilityState={{ expanded: advancedOpen }} onPress={() => setAdvancedOpen(!advancedOpen)}>
+            <Text className="text-primary">{advancedOpen ? 'Hide Advanced' : 'Advanced · broadcast settings'}</Text>
+          </Button>
+          {advancedOpen ? <View className="mb-6">
+            <Text className="text-sm font-semibold text-foreground mb-2">Network profile</Text>
+            <View className="gap-2 mb-4">
+              <Button variant={!selectedProfile ? 'default' : 'outline'} accessibilityState={{ selected: !selectedProfile }} onPress={() => setNetworkProfileId(undefined)}><Text>Device-specific settings</Text></Button>
+              {profiles.map((profile) => <Button key={profile.id} variant={networkProfileId === profile.id ? 'default' : 'outline'} accessibilityState={{ selected: networkProfileId === profile.id }} onPress={() => { setNetworkProfileId(profile.id); change('broadcastIp', profile.broadcastIp); }}><Text>{profile.name}</Text></Button>)}
+              <Text className="text-sm text-muted-foreground">Manage shared settings from Networks on the home screen.</Text>
             </View>
-            <View className="mb-4">
-              <Label className="text-foreground mb-1.5" nativeID="mac-label">MAC Address</Label>
-              <Input ref={macInput} value={fields.macAddress} onChangeText={(value) => change('macAddress', value)} onBlur={() => change('macAddress', normalizeMac(fields.macAddress))}
-                placeholder="AA:BB:CC:DD:EE:FF" autoCapitalize="characters" autoCorrect={false} spellCheck={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => advancedOpen && !selectedProfile ? ipInput.current?.focus() : handleAdd()}
-                className="bg-secondary border-border text-foreground font-mono" accessibilityLabel="MAC address" accessibilityLabelledBy="mac-label" aria-invalid={!!errors.macAddress} />
-              {errors.macAddress ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.macAddress}</Text> : null}
-            </View>
-            <Button variant="ghost" className="mb-2 items-start" accessibilityState={{ expanded: advancedOpen }} onPress={() => setAdvancedOpen(!advancedOpen)}>
-              <Text className="text-primary">{advancedOpen ? 'Hide Advanced' : 'Advanced · broadcast settings'}</Text>
-            </Button>
-            {advancedOpen ? <View className="mb-6">
-              <Text className="text-sm font-semibold text-foreground mb-2">Network profile</Text>
-              <View className="gap-2 mb-4">
-                <Button variant={!selectedProfile ? 'default' : 'outline'} accessibilityState={{ selected: !selectedProfile }} onPress={() => setNetworkProfileId(undefined)}><Text>Device-specific settings</Text></Button>
-                {profiles.map((profile) => <Button key={profile.id} variant={networkProfileId === profile.id ? 'default' : 'outline'} accessibilityState={{ selected: networkProfileId === profile.id }} onPress={() => { setNetworkProfileId(profile.id); change('broadcastIp', profile.broadcastIp); }}><Text>{profile.name}</Text></Button>)}
-                <Text className="text-sm text-muted-foreground">Manage shared settings from Networks on the home screen.</Text>
-              </View>
-              <Label className="text-foreground mb-1.5" nativeID="ip-label">Broadcast IP</Label>
-              <Input ref={ipInput} editable={!selectedProfile} value={selectedProfile?.broadcastIp ?? fields.broadcastIp} onChangeText={(value) => change('broadcastIp', value)} placeholder="255.255.255.255"
-                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad'} autoCapitalize="none" autoCorrect={false} spellCheck={false}
-                returnKeyType="done" onSubmitEditing={handleAdd} className="bg-secondary border-border text-foreground font-mono"
-                accessibilityLabel="Broadcast IP address" accessibilityLabelledBy="ip-label" aria-invalid={!!errors.broadcastIp} />
-              {errors.broadcastIp ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.broadcastIp}</Text> : null}
-              <Text className="text-sm text-muted-foreground mt-2">The default sends to your local network. If it does not work, ask your network administrator for the subnet broadcast address. It depends on the subnet mask and does not always end in .255. Guest Wi-Fi or network isolation may block wake packets.</Text>
-            </View> : <Text className="text-sm text-muted-foreground mb-4">{selectedProfile ? selectedProfile.name + ' broadcast: ' : 'Using local broadcast: '}{selectedProfile?.broadcastIp ?? fields.broadcastIp}</Text>}
-            <DialogFooter className="flex-row gap-3">
-              <Button variant="outline" className="flex-1 border-border" onPress={() => onOpenChange(false)}><Text className="text-foreground">Cancel</Text></Button>
-              <Button className="flex-1 bg-primary" onPress={handleAdd}><Text className="text-primary-foreground font-semibold">{device ? 'Save Changes' : 'Add Device'}</Text></Button>
-            </DialogFooter>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </DialogContent>
+            <Label className="text-foreground mb-1.5" nativeID="ip-label">Broadcast IP</Label>
+            <Input ref={ipInput} editable={!selectedProfile} value={selectedProfile?.broadcastIp ?? fields.broadcastIp} onChangeText={(value) => change('broadcastIp', value)} placeholder="255.255.255.255"
+              keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad'} autoCapitalize="none" autoCorrect={false} spellCheck={false}
+              returnKeyType="done" onSubmitEditing={handleAdd} className="bg-secondary border-border text-foreground font-mono"
+              accessibilityLabel="Broadcast IP address" accessibilityLabelledBy="ip-label" aria-invalid={!!errors.broadcastIp} />
+            {errors.broadcastIp ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.broadcastIp}</Text> : null}
+            <Text className="text-sm text-muted-foreground mt-2">The default sends to your local network. If it does not work, ask your network administrator for the subnet broadcast address. It depends on the subnet mask and does not always end in .255. Guest Wi-Fi or network isolation may block wake packets.</Text>
+          </View> : <Text className="text-sm text-muted-foreground mb-4">{selectedProfile ? selectedProfile.name + ' broadcast: ' : 'Using local broadcast: '}{selectedProfile?.broadcastIp ?? fields.broadcastIp}</Text>}
+          <DialogFooter className="flex-row gap-3">
+            <Button variant="outline" className="flex-1 border-border" onPress={() => onOpenChange(false)}><Text className="text-foreground">Cancel</Text></Button>
+            <Button className="flex-1 bg-primary" onPress={handleAdd}><Text className="text-primary-foreground font-semibold">{device ? 'Save Changes' : 'Add Device'}</Text></Button>
+          </DialogFooter>
+        </View>      </DialogContent>
     </Dialog>
   );
 }

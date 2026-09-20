@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -31,8 +31,8 @@ export function GroupWakeSheet({ group, open, onOpenChange }: GroupWakeSheetProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border rounded-2xl max-h-[85%]">
-        <DialogHeader className="pr-6">
+      <DialogContent className="bg-card border-border rounded-2xl">
+        <DialogHeader>
           <DialogTitle>Wake {group.name}</DialogTitle>
           <DialogDescription>Send wake requests to computers in this group.</DialogDescription>
         </DialogHeader>
@@ -45,11 +45,9 @@ export function GroupWakeSheet({ group, open, onOpenChange }: GroupWakeSheetProp
         ) : (
           <>
             <Text accessibilityLiveRegion="polite">{sending ? `Sending ${batchCount} wake requests…` : `Send ${eligible.length} wake ${eligible.length === 1 ? 'request' : 'requests'}?`}</Text>
-            <ScrollView>
-              <View className="gap-2">
+            <View className="gap-2">
                 {members.map((device) => <Text key={device.id} className="text-sm">{device.name}{!sending && device.wakeStatus === 'sending' ? ' — already sending' : !sending && getNetworkMismatch(device, profiles, activeProfileId) ? ' — network mismatch' : ''}</Text>)}
-              </View>
-            </ScrollView>
+            </View>
             <Text className="text-sm text-muted-foreground">{sending ? 'You can close this dialog; completed requests will appear in each device’s history.' : `${members.length - eligible.length} device(s) already sending or on another selected network will be skipped. A sent request does not confirm the computer is awake.`}</Text>
             {unavailableReason ? <Text className="text-sm text-muted-foreground">{unavailableReason}</Text> : null}
             <View className="flex-row flex-wrap gap-3">

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Image, Linking, Platform, ScrollView, Share, View } from 'react-native';
+import { Image, Linking, Platform, Share, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 
 export function DeviceTransferSheet({ open, onOpenChange }: Props) {
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="max-h-[90%]">
+    <DialogContent>
       {open ? <TransferContent /> : null}
     </DialogContent>
   </Dialog>;
@@ -73,7 +73,7 @@ function TransferContent() {
     setNotice(`Imported ${result.additions.length} device(s). ${result.skipped} existing device(s) left unchanged.`);
   };
 
-  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 16 }}>
+  return <View className="gap-4">
     <DialogHeader><DialogTitle>Transfer devices</DialogTitle></DialogHeader>
     <Text className="text-sm text-muted-foreground">Back up device names and network addresses. Existing devices are kept; wake history is not transferred.</Text>
     <Text className="font-semibold">Export a backup</Text>
@@ -116,7 +116,7 @@ function TransferContent() {
       <Button disabled={!plan.additions.length} onPress={importPreview}><Text>Import {plan.additions.length} devices</Text></Button>
     </View> : null}
     {notice ? <Text accessibilityLiveRegion="polite" className="text-sm">{notice}</Text> : null}
-  </ScrollView>;
+  </View>;
 }
 
 

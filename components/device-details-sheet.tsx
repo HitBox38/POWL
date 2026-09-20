@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, ScrollView, useWindowDimensions } from 'react-native';
+import { View } from 'react-native';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -21,7 +21,6 @@ function DeviceDetails({ device, open, onOpenChange }: Props) {
   const [editing, setEditing] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [section, setSection] = useState<'history' | 'troubleshoot' | 'organize' | null>(null);
-  const { height } = useWindowDimensions();
   if (editing) return <DeviceEditorSheet device={device} open onOpenChange={() => setEditing(false)} />;
   if (section === 'history') return <WakeHistorySheet device={device} open onOpenChange={() => setSection(null)} />;
   if (section === 'troubleshoot') return <TroubleshootSheet device={device} open onOpenChange={() => setSection(null)} onRetry={() => { void useDevicesStore.getState().wakeDevice(device.id); }} />;
@@ -34,9 +33,9 @@ function DeviceDetails({ device, open, onOpenChange }: Props) {
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border mx-4 rounded-2xl">
-        <ScrollView style={{ maxHeight: height * 0.7 }}>
-          <DialogHeader className="pr-6 mb-5">
+      <DialogContent className="bg-card border-border rounded-2xl">
+        <View>
+          <DialogHeader className="mb-5">
             <DialogTitle>{confirmRemove ? 'Remove device?' : device.name}</DialogTitle>
             <DialogDescription>{confirmRemove ? `Remove ${device.name} from POWL? You can add it again later.` : 'Saved network settings for this device.'}</DialogDescription>
           </DialogHeader>
@@ -61,7 +60,7 @@ function DeviceDetails({ device, open, onOpenChange }: Props) {
               <Button variant="ghost" onPress={() => onOpenChange(false)}><Text>Done</Text></Button>
             </View>
           )}
-        </ScrollView>
+        </View>
       </DialogContent>
     </Dialog>
   );
