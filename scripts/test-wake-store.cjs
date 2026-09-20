@@ -84,3 +84,44 @@ test('completion after device removal does not recreate it', async () => {
   await pending;
   assert.equal(store.getState().devices.length, 0);
 });
+
+test('history keeps the latest 20 completed requests and their original destinations', async () => {
+  const { store, storage } = await createStore(async () => {});
+  store.setState({ devices: [{ ...device }] });
+  for (let i = 0; i < 23; i++) {
+    store.getState().updateDevice(device.id, { broadcastIp: `192.168.${i}.255` });
+    await store.getState().wakeDevice(device.id);
+  }
+  const history = store.getState().devices[0].wakeHistory;
+  assert.equal(history.length, 20);
+  assert.equal(history[0].broadcastIp, '192.168.22.255');
+  assert.equal(history[19].broadcastIp, '192.168.3.255');
+  const restarted = await createStore(async () => {}, storage.get('powl-devices'));
+  assert.equal(restarted.store.getState().devices[0].wakeHistory.length, 20);
+});
+
+test('adding history preserves the previous feedback-only request', async () => {
+  const previous = { requestedAt: '2026-01-01T00:00:00.000Z', result: 'sent', macAddress: device.macAddress, broadcastIp: device.broadcastIp };
+  const { store } = await createStore(async () => {});
+  store.setState({ devices: [{ ...device, lastWakeRequest: previous }] });
+  await store.getState().wakeDevice(device.id);
+  assert.equal(store.getState().devices[0].wakeHistory.length, 2);
+  assert.equal(store.getState().devices[0].wakeHistory[1].requestedAt, previous.requestedAt);
+});
+
+test('clearing history persists and does not cancel an in-flight send', async () => {
+  let finish;
+  const { store, storage } = await createStore(() => new Promise((resolve) => { finish = resolve; }));
+  const previous = { requestedAt: '2026-01-01T00:00:00.000Z', result: 'sent', macAddress: device.macAddress, broadcastIp: device.broadcastIp };
+  store.setState({ devices: [{ ...device, wakeStatus: 'success', lastWakeRequest: previous, wakeHistory: [previous] }] });
+  const pending = store.getState().wakeDevice(device.id);
+  store.getState().clearWakeHistory(device.id);
+  assert.equal(store.getState().devices[0].wakeStatus, 'sending');
+  assert.equal(store.getState().devices[0].lastWakeRequest, undefined);
+  const restarted = await createStore(async () => {}, storage.get('powl-devices'));
+  assert.equal(restarted.store.getState().devices[0].wakeStatus, 'idle');
+  assert.equal(restarted.store.getState().devices[0].wakeHistory.length, 0);
+  finish();
+  await pending;
+  assert.equal(store.getState().devices[0].wakeHistory.length, 1);
+});
