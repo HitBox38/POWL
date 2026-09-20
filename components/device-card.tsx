@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { View, Pressable, Alert } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, Pressable } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useDevicesStore, type Device, type WakeStatus } from '@/store/devices';
 import { getWakeUnavailableReason, sendMagicPacket } from '@/modules/wol-sender';
+import { DeviceDetailsSheet } from '@/components/device-details-sheet';
 import { cn } from '@/lib/cn';
 
 type DeviceCardProps = {
@@ -39,7 +40,8 @@ const STATUS_CONFIG: Record<
 
 export function DeviceCard({ device }: DeviceCardProps) {
   const wakeUnavailableReason = getWakeUnavailableReason();
-  const { setWakeStatus, removeDevice } = useDevicesStore();
+  const { setWakeStatus } = useDevicesStore();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const statusConfig = STATUS_CONFIG[device.wakeStatus];
   const isSending = device.wakeStatus === 'sending';
   const attemptId = useRef(0);
@@ -80,21 +82,6 @@ export function DeviceCard({ device }: DeviceCardProps) {
       const message = err instanceof Error ? err.message : String(err);
       setWakeStatus(device.id, 'error', message);
     }
-  };
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Remove Device',
-      `Remove "${device.name}" from your list?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => removeDevice(device.id),
-        },
-      ]
-    );
   };
 
   return (
@@ -151,14 +138,16 @@ export function DeviceCard({ device }: DeviceCardProps) {
               </Text>
             </Button>
             <Pressable
-              onPress={handleDelete}
+              onPress={() => setDetailsOpen(true)} accessibilityRole="button" accessibilityLabel={`Details for ${device.name}`}
               className="items-center justify-center rounded-md py-1 px-2 active:opacity-60"
             >
-              <Text className="text-xs text-muted-foreground">Remove</Text>
+              <Text className="text-xs text-muted-foreground">Details</Text>
             </Pressable>
           </View>
         </View>
       </CardContent>
+      <DeviceDetailsSheet device={device} open={detailsOpen} onOpenChange={setDetailsOpen} />
     </Card>
   );
 }
+

@@ -5,30 +5,42 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { useDevicesStore } from '@/store/devices';
+import { useDevicesStore, type Device } from '@/store/devices';
 import { normalizeDeviceFields, normalizeMac, validateDeviceFields, type DeviceFields } from '@/lib/device-form';
 
 type AddDeviceSheetProps = { open: boolean; onOpenChange: (open: boolean) => void };
+type DeviceEditorSheetProps = AddDeviceSheetProps & { device?: Device };
 const EMPTY_FIELDS: DeviceFields = { name: '', macAddress: '', broadcastIp: '255.255.255.255' };
 
 // Unmount the draft when closed so Cancel, X, Escape and Android Back all discard it.
 export function AddDeviceSheet(props: AddDeviceSheetProps) {
-  return props.open ? <DeviceForm {...props} /> : null;
+  return <DeviceEditorSheet {...props} />;
 }
 
-function DeviceForm({ open, onOpenChange }: AddDeviceSheetProps) {
+export function DeviceEditorSheet(props: DeviceEditorSheetProps) {
+  return props.open ? <DeviceForm key={props.device?.id ?? 'new'} {...props} /> : null;
+}
+
+function DeviceForm({ open, onOpenChange, device }: DeviceEditorSheetProps) {
   const devices = useDevicesStore((state) => state.devices);
-  const [fields, setFields] = useState<DeviceFields>(EMPTY_FIELDS);
+  const [fields, setFields] = useState<DeviceFields>(() => device ? { name: device.name, macAddress: device.macAddress, broadcastIp: device.broadcastIp } : EMPTY_FIELDS);
   const [submitted, setSubmitted] = useState(false);
   const { height } = useWindowDimensions();
   const macInput = useRef<TextInput>(null);
   const ipInput = useRef<TextInput>(null);
-  const errors = submitted ? validateDeviceFields(fields, devices) : {};
+  const errors = submitted ? validateDeviceFields(fields, devices, device?.id) : {};
   const change = (field: keyof DeviceFields, value: string) => setFields((previous) => ({ ...previous, [field]: value }));
   const handleAdd = () => {
     setSubmitted(true);
-    if (Object.keys(validateDeviceFields(fields, useDevicesStore.getState().devices)).length) return;
-    useDevicesStore.getState().addDevice(normalizeDeviceFields(fields));
+    if (Object.keys(validateDeviceFields(fields, useDevicesStore.getState().devices, device?.id)).length) return;
+    const store = useDevicesStore.getState();
+    if (device) {
+      const current = store.devices.find((item) => item.id === device.id);
+      if (!current || current.wakeStatus === 'sending') return;
+      store.updateDevice(device.id, normalizeDeviceFields(fields));
+    } else {
+      store.addDevice(normalizeDeviceFields(fields));
+    }
     onOpenChange(false);
   };
 
@@ -38,7 +50,7 @@ function DeviceForm({ open, onOpenChange }: AddDeviceSheetProps) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView style={{ maxHeight: height * 0.7 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
             <DialogHeader className="mb-4 pr-6">
-              <DialogTitle className="text-foreground text-xl font-bold">Add Device</DialogTitle>
+              <DialogTitle className="text-foreground text-xl font-bold">{device ? 'Edit Device' : 'Add Device'}</DialogTitle>
               <DialogDescription>Save the network details for your computer.</DialogDescription>
             </DialogHeader>
             <View className="mb-4">
@@ -65,7 +77,7 @@ function DeviceForm({ open, onOpenChange }: AddDeviceSheetProps) {
             </View>
             <DialogFooter className="flex-row gap-3">
               <Button variant="outline" className="flex-1 border-border" onPress={() => onOpenChange(false)}><Text className="text-foreground">Cancel</Text></Button>
-              <Button className="flex-1 bg-primary" onPress={handleAdd}><Text className="text-primary-foreground font-semibold">Add Device</Text></Button>
+              <Button className="flex-1 bg-primary" onPress={handleAdd}><Text className="text-primary-foreground font-semibold">{device ? 'Save Changes' : 'Add Device'}</Text></Button>
             </DialogFooter>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -73,4 +85,5 @@ function DeviceForm({ open, onOpenChange }: AddDeviceSheetProps) {
     </Dialog>
   );
 }
+
 
