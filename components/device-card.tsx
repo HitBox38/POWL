@@ -1,150 +1,55 @@
 import { useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { useDevicesStore, type Device, type WakeStatus } from '@/store/devices';
-import { getWakeUnavailableReason } from '@/modules/wol-sender';
 import { DeviceDetailsSheet } from '@/components/device-details-sheet';
-import { cn } from '@/lib/cn';
-import { TroubleshootSheet } from '@/components/troubleshoot-sheet';
+import { useDevicesStore, type Device } from '@/store/devices';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
+import { getNetworkMismatch } from '@/lib/network-profiles';
+import { getWakeUnavailableReason } from '@/modules/wol-sender';
 
-type DeviceCardProps = {
-  device: Device;
-};
-
-const STATUS_CONFIG: Record<
-  WakeStatus,
-  { label: string; color: string; buttonLabel: string }
-> = {
-  idle: {
-    label: '',
-    color: '',
-    buttonLabel: 'Wake',
-  },
-  sending: {
-    label: 'Sending packet...',
-    color: 'text-muted-foreground',
-    buttonLabel: 'Sending...',
-  },
-  success: {
-    label: 'Wake request sent',
-    color: 'text-primary',
-    buttonLabel: 'Wake',
-  },
-  error: {
-    label: 'Failed to send',
-    color: 'text-destructive',
-    buttonLabel: 'Retry',
-  },
-};
-
-export function DeviceCard({ device }: DeviceCardProps) {
-  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
-  const wakeUnavailableReason = getWakeUnavailableReason();
+export function DeviceCard({ device }: { device: Device }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const wakeDevice = useDevicesStore((state) => state.wakeDevice);
-  const statusConfig = STATUS_CONFIG[device.wakeStatus];
-  const isSending = device.wakeStatus === 'sending';
-  const handleWake = () => { void wakeDevice(device.id); };
+  const wakeDevice = useDevicesStore(state => state.wakeDevice);
+  const toggleFavorite = useDevicesStore(state => state.toggleFavorite);
+  const group = useDevicesStore(state => state.groups.find(item => item.id === device.groupId));
+  const { profiles, activeProfileId } = useNetworkProfilesStore();
+  const profile = profiles.find(item => item.id === device.networkProfileId);
+  const mismatch = getNetworkMismatch(device, profiles, activeProfileId);
+  const unavailable = getWakeUnavailableReason();
+  const sending = device.wakeStatus === 'sending';
+  const disabled = sending || !!unavailable || !!mismatch;
+  const status = sending ? 'Sending wake request…' : device.lastWakeRequest
+    ? `Last request ${device.lastWakeRequest.result === 'sent' ? 'sent' : 'failed'} · ${new Date(device.lastWakeRequest.requestedAt).toLocaleString()}`
+    : 'Ready for your first wake request';
 
-  return (
-    <Card className="mb-3 border-border bg-card">
-      <CardContent className="p-4">
-        <View className="flex-row items-center justify-between">
-          {/* Device info */}
-          <View className="flex-1 mr-3">
-            <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
-              {device.name}
-            </Text>
-            <Text className="text-sm text-muted-foreground font-mono mt-0.5">
-              {device.macAddress}
-            </Text>
-            <Text className="text-xs text-muted-foreground mt-0.5">
-              {device.broadcastIp}
-            </Text>
-            {statusConfig.label ? (
-              <Text accessibilityLiveRegion="polite" className={cn('text-xs mt-1.5 font-medium', statusConfig.color)}>
-                {statusConfig.label}
-              </Text>
-            ) : null}
-            {device.wakeStatus === 'error' ? (
-              <Text className="text-xs text-muted-foreground mt-1.5">
-                POWL couldn&apos;t send this request. Check your connection and saved network settings, then retry.
-              </Text>
-            ) : null}
-            {device.lastWakeRequest ? (
-              <Text className="text-xs text-muted-foreground mt-1.5">
-                Last request {device.lastWakeRequest.result === 'sent' ? 'sent' : 'failed'}: {'\n'}
-                {new Date(device.lastWakeRequest.requestedAt).toLocaleString()}
-              </Text>
-            ) : null}
-            {device.lastWakeRequest?.result === 'sent' ? (
-              <Text className="text-xs text-muted-foreground mt-1.5">
-                Sending a request does not confirm the computer is awake.
-              </Text>
-            ) : null}
-            {wakeUnavailableReason ? (
-              <Text className="text-xs text-muted-foreground mt-1.5">
-                {wakeUnavailableReason}
-              </Text>
-            ) : null}
-          </View>
-
-          {/* Actions */}
-          <View className="gap-2">
-            <Button
-              size="sm"
-              onPress={handleWake}
-              disabled={isSending || wakeUnavailableReason !== null}
-              accessibilityLabel={`${statusConfig.buttonLabel} ${device.name}`}
-              accessibilityState={{ disabled: isSending || wakeUnavailableReason !== null, busy: isSending }}
-              className={cn(
-                'min-w-[80px]',
-                device.wakeStatus === 'success' && 'bg-primary/20 border border-primary',
-                device.wakeStatus === 'error' && 'bg-destructive/20 border border-destructive'
-              )}
-            >
-              <Text
-                className={cn(
-                  'text-sm font-semibold',
-                  device.wakeStatus === 'success' && 'text-primary',
-                  device.wakeStatus === 'error' && 'text-destructive',
-                  (device.wakeStatus === 'idle' || device.wakeStatus === 'sending') &&
-                    'text-primary-foreground'
-                )}
-              >
-                {statusConfig.buttonLabel}
-              </Text>
-            </Button>
-            <Pressable
-              onPress={() => setDetailsOpen(true)} accessibilityRole="button" accessibilityLabel={`Details for ${device.name}`}
-              className="min-h-12 min-w-12 items-center justify-center rounded-md py-3 px-2 active:opacity-60"
-            >
-              <Text className="text-xs text-muted-foreground">Details</Text>
-            </Pressable>
-          </View>
+  return <Card className="mb-3 border-border bg-card">
+    <CardContent className="p-4 gap-3">
+      <View className="flex-row items-start gap-3">
+        <View className="rounded-xl bg-secondary p-3"><Icon name="computer" size={24} className="text-primary" /></View>
+        <View className="flex-1 pt-1">
+          <Text className="text-lg font-semibold">{device.name}</Text>
+          <Text className="text-sm text-muted-foreground mt-1">{[group?.name, profile?.name ?? 'Local network'].filter(Boolean).join(' · ')}</Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Troubleshoot waking ${device.name}`}
-          onPress={() => setShowTroubleshooting(true)}
-          className="min-h-12 justify-center mt-1 active:opacity-60"
-        >
-          <Text className="text-sm text-primary">Troubleshoot</Text>
-        </Pressable>
-        {showTroubleshooting ? (
-          <TroubleshootSheet
-            device={device}
-            open={showTroubleshooting}
-            onOpenChange={setShowTroubleshooting}
-            onRetry={handleWake}
-          />
-        ) : null}
-      </CardContent>
-      <DeviceDetailsSheet device={device} open={detailsOpen} onOpenChange={setDetailsOpen} />
-    </Card>
-  );
+        <Button variant="ghost" size="icon" onPress={() => toggleFavorite(device.id)} accessibilityLabel={`${device.isFavorite ? 'Remove' : 'Add'} ${device.name} ${device.isFavorite ? 'from' : 'to'} favorites`} accessibilityState={{ selected: !!device.isFavorite }}>
+          <Icon name={device.isFavorite ? 'star' : 'star-border'} size={24} className={device.isFavorite ? 'text-primary' : 'text-muted-foreground'} />
+        </Button>
+      </View>
+      <Text accessibilityLiveRegion="polite" className={device.wakeStatus === 'error' ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>{status}</Text>
+      {device.lastWakeRequest?.result === 'sent' ? <Text className="text-xs text-muted-foreground">Request sent; computer wake is not confirmed.</Text> : null}
+      {device.wakeStatus === 'error' ? <Text className="text-sm text-muted-foreground">Check your connection or open Details for troubleshooting.</Text> : null}
+      {mismatch ? <Text className="text-sm text-muted-foreground">{mismatch}</Text> : null}
+      {unavailable ? <Text className="text-sm text-muted-foreground">{unavailable}</Text> : null}
+      <View className="flex-row gap-3">
+        <Button className="flex-1" disabled={disabled} accessibilityLabel={`Wake ${device.name}`} accessibilityState={{ disabled, busy: sending }} onPress={() => { void wakeDevice(device.id); }}>
+          <Icon name="power-settings-new" size={20} className="text-primary-foreground" />
+          <Text>{sending ? 'Sending…' : device.wakeStatus === 'error' ? 'Retry wake' : 'Wake'}</Text>
+        </Button>
+        <Button variant="outline" onPress={() => setDetailsOpen(true)} accessibilityLabel={`Details for ${device.name}`}><Text>Details</Text></Button>
+      </View>
+    </CardContent>
+    <DeviceDetailsSheet device={device} open={detailsOpen} onOpenChange={setDetailsOpen} />
+  </Card>;
 }
-
-
