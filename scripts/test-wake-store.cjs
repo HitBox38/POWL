@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
@@ -6,7 +7,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 
 // Exercise the actual Zustand/persist store with only native I/O substituted.
-async function createStore(sender, saved) {
+async function createStore(sender, saved, network = { profiles: [], activeProfileId: null }) {
   const storage = new Map(saved ? [['powl-devices', saved]] : []);
   const output = ts.transpileModule(
     readFileSync(path.join(__dirname, '../store/devices.ts'), 'utf8'),
@@ -17,6 +18,13 @@ async function createStore(sender, saved) {
     exports, Date, Error, String,
     require: (name) => {
       if (name === '@/modules/wol-sender') return { sendMagicPacket: sender };
+      if (name === '@/store/network-profiles') return { useNetworkProfilesStore: { getState: () => network, persist: { hasHydrated: () => true } } };
+      if (name === '@/lib/network-profiles') {
+        const networkExports = {};
+        const code = ts.transpileModule(readFileSync(path.join(__dirname, '../lib/network-profiles.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+        vm.runInNewContext(code, { exports: networkExports });
+        return networkExports;
+      }
       if (name === '@react-native-async-storage/async-storage') return {
         getItem: async (key) => storage.get(key) ?? null,
         setItem: async (key, value) => { storage.set(key, value); },
@@ -31,6 +39,19 @@ async function createStore(sender, saved) {
 }
 
 const device = { id: 'computer', name: 'Computer', macAddress: 'AA:BB:CC:DD:EE:FF', broadcastIp: '255.255.255.255', wakeStatus: 'idle' };
+
+test('profile destinations are sent and recorded; mismatched networks do not send', async () => {
+  const destinations = [];
+  const network = { profiles: [{ id: 'home', name: 'Home', broadcastIp: '192.168.4.255' }], activeProfileId: 'home' };
+  const { store } = await createStore(async value => { destinations.push(value); }, undefined, network);
+  store.setState({ devices: [{ ...device, networkProfileId: 'home' }] });
+  await store.getState().wakeDevice(device.id);
+  assert.equal(destinations[0].broadcastIp, '192.168.4.255');
+  assert.equal(store.getState().devices[0].lastWakeRequest.broadcastIp, '192.168.4.255');
+  network.activeProfileId = null;
+  await store.getState().wakeDevice(device.id);
+  assert.equal(destinations.length, 1);
+});
 
 test('successful sends persist their timestamp and destination across restart', async () => {
   const { store, storage } = await createStore(async () => {});

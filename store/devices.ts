@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sendMagicPacket } from '@/modules/wol-sender';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
+import { getNetworkMismatch, resolveBroadcastIp } from '@/lib/network-profiles';
 
 export type WakeStatus = 'idle' | 'sending' | 'success' | 'error';
 export const WAKE_HISTORY_LIMIT = 20;
@@ -19,6 +21,7 @@ export type Device = {
   name: string;
   macAddress: string;
   broadcastIp: string;
+  networkProfileId?: string;
   /** Sending is transient; restart restores only the last completed result. */
   wakeStatus: WakeStatus;
   wakeError?: string;
@@ -32,7 +35,8 @@ type DevicesState = {
   addDevice: (device: Omit<Device, 'id' | 'wakeStatus' | 'wakeError' | 'lastWakeRequest' | 'wakeHistory'>) => void;
   addDevices: (devices: Pick<Device, 'name' | 'macAddress' | 'broadcastIp'>[]) => void;
   removeDevice: (id: string) => void;
-  updateDevice: (id: string, updates: Partial<Pick<Device, 'name' | 'macAddress' | 'broadcastIp'>>) => void;
+  removeNetworkProfile: (id: string) => void;
+  updateDevice: (id: string, updates: Partial<Pick<Device, 'name' | 'macAddress' | 'broadcastIp' | 'networkProfileId'>>) => void;
   setWakeStatus: (id: string, status: WakeStatus, error?: string) => void;
   wakeDevice: (id: string) => Promise<void>;
   clearWakeHistory: (id: string) => void;
@@ -63,6 +67,16 @@ export const useDevicesStore = create<DevicesState>()(
         }))],
       })),
 
+      removeNetworkProfile: (id) => {
+        if (!useDevicesStore.persist.hasHydrated() || !useNetworkProfilesStore.persist.hasHydrated()) return;
+        const network = useNetworkProfilesStore.getState();
+        const profile = network.profiles.find(item => item.id === id);
+        if (!profile) return;
+        set(state => ({ devices: state.devices.map(device => device.networkProfileId === id
+          ? { ...device, networkProfileId: undefined, broadcastIp: profile.broadcastIp } : device) }));
+        network.removeProfile(id);
+      },
+
       removeDevice: (id) =>
         set((state) => ({
           devices: state.devices.filter((d) => d.id !== id),
@@ -85,12 +99,17 @@ export const useDevicesStore = create<DevicesState>()(
         })),
 
       wakeDevice: async (id) => {
+        if (!useDevicesStore.persist.hasHydrated() || !useNetworkProfilesStore.persist.hasHydrated()) return;
         const device = get().devices.find((item) => item.id === id);
         if (!device || device.wakeStatus === 'sending') return;
 
+        const network = useNetworkProfilesStore.getState();
+        const mismatch = getNetworkMismatch(device, network.profiles, network.activeProfileId);
+        if (mismatch) return;
+
         const destination = {
           macAddress: device.macAddress,
-          broadcastIp: device.broadcastIp,
+          broadcastIp: resolveBroadcastIp(device, network.profiles),
         };
         const requestedAt = new Date().toISOString();
         get().setWakeStatus(id, 'sending');

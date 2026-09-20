@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useDevicesStore, type Device, type WakeStatus } from '@/store/devices';
 import { getWakeUnavailableReason } from '@/modules/wol-sender';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
+import { resolveBroadcastIp, getNetworkMismatch } from '@/lib/network-profiles';
 import { DeviceDetailsSheet } from '@/components/device-details-sheet';
 import { cn } from '@/lib/cn';
 import { TroubleshootSheet } from '@/components/troubleshoot-sheet';
@@ -44,6 +46,8 @@ export function DeviceCard({ device }: DeviceCardProps) {
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const wakeUnavailableReason = getWakeUnavailableReason();
+  const { profiles, activeProfileId } = useNetworkProfilesStore();
+  const networkMismatch = getNetworkMismatch(device, profiles, activeProfileId);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const wakeDevice = useDevicesStore((state) => state.wakeDevice);
   const statusConfig = STATUS_CONFIG[device.wakeStatus];
@@ -63,7 +67,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
               {device.macAddress}
             </Text>
             <Text className="text-xs text-muted-foreground mt-0.5">
-              {device.broadcastIp}
+              {resolveBroadcastIp(device, profiles)}
             </Text>
             {statusConfig.label ? (
               <Text accessibilityLiveRegion="polite" className={cn('text-xs mt-1.5 font-medium', statusConfig.color)}>
@@ -86,6 +90,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
                 Sending a request does not confirm the computer is awake.
               </Text>
             ) : null}
+            {networkMismatch ? <Text className="text-sm text-muted-foreground mt-1.5">{networkMismatch}</Text> : null}
             {wakeUnavailableReason ? (
               <Text className="text-xs text-muted-foreground mt-1.5">
                 {wakeUnavailableReason}
@@ -98,9 +103,9 @@ export function DeviceCard({ device }: DeviceCardProps) {
             <Button
               size="sm"
               onPress={handleWake}
-              disabled={isSending || wakeUnavailableReason !== null}
+              disabled={isSending || wakeUnavailableReason !== null || networkMismatch !== null}
               accessibilityLabel={`${statusConfig.buttonLabel} ${device.name}`}
-              accessibilityState={{ disabled: isSending || wakeUnavailableReason !== null, busy: isSending }}
+              accessibilityState={{ disabled: isSending || wakeUnavailableReason !== null || networkMismatch !== null, busy: isSending }}
               className={cn(
                 'min-w-[80px]',
                 device.wakeStatus === 'success' && 'bg-primary/20 border border-primary',
@@ -161,5 +166,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
     </Card>
   );
 }
+
+
 
 

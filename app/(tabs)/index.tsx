@@ -4,15 +4,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { DeviceCard } from '@/components/device-card';
+import { DeviceDataGate } from '@/components/device-data-gate';
+import { NetworkProfilesSheet } from '@/components/network-profiles-sheet';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
 import { AddDeviceSheet } from '@/components/add-device-sheet';
 import { useDevicesStore } from '@/store/devices';
 import { AppearanceSettings } from '@/components/appearance-settings';
 import { DeviceTransferSheet } from '@/components/device-transfer-sheet';
 
 export default function HomeScreen() {
-  const { devices } = useDevicesStore();
+  return <DeviceDataGate><HomeContent /></DeviceDataGate>;
+}
+
+function HomeContent() {
+  const devices = useDevicesStore((state) => state.devices);
+
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [profilesOpen, setProfilesOpen] = useState(false);
+  const { profiles, activeProfileId } = useNetworkProfilesStore();
+  const currentProfile = profiles.find((profile) => profile.id === activeProfileId);
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -39,6 +50,12 @@ export default function HomeScreen() {
       </View>
       <DeviceTransferSheet open={transferOpen} onOpenChange={setTransferOpen} />
 
+      <View className="px-4 py-2 border-b border-border">
+        <Button variant="ghost" onPress={() => setProfilesOpen(true)} accessibilityLabel="Manage network profiles">
+          <Text>Networks · {currentProfile?.name ?? 'Choose current network'}</Text>
+        </Button>
+      </View>
+      <NetworkProfilesSheet open={profilesOpen} onOpenChange={setProfilesOpen} />
       {/* Device list */}
       {devices.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8 gap-3">
@@ -73,3 +90,5 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+

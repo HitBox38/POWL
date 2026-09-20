@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { DeviceEditorSheet } from '@/components/add-device-sheet';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
+import { resolveBroadcastIp } from '@/lib/network-profiles';
 import { useDevicesStore, type Device } from '@/store/devices';
 
 type Props = { device: Device; open: boolean; onOpenChange: (open: boolean) => void };
@@ -11,6 +13,8 @@ export function DeviceDetailsSheet(props: Props) {
   return props.open ? <DeviceDetails {...props} /> : null;
 }
 function DeviceDetails({ device, open, onOpenChange }: Props) {
+  const profiles = useNetworkProfilesStore((state) => state.profiles);
+  const profile = profiles.find((item) => item.id === device.networkProfileId);
   const [editing, setEditing] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const { height } = useWindowDimensions();
@@ -38,7 +42,8 @@ function DeviceDetails({ device, open, onOpenChange }: Props) {
           ) : (
             <View className="gap-4">
               <View><Text className="text-sm text-muted-foreground">MAC address</Text><Text selectable className="font-mono text-foreground">{device.macAddress}</Text></View>
-              <View><Text className="text-sm text-muted-foreground">Broadcast IP</Text><Text selectable className="font-mono text-foreground">{device.broadcastIp}</Text></View>
+              <View><Text className="text-sm text-muted-foreground">Broadcast IP</Text><Text selectable className="font-mono text-foreground">{resolveBroadcastIp(device, profiles)}</Text></View>
+              {profile ? <Text className="text-sm text-muted-foreground">Network profile: {profile.name}</Text> : null}
               <Text className="text-sm text-muted-foreground">To test these settings, close this panel and tap Wake on the device card.</Text>
               {sending ? <Text accessibilityLiveRegion="polite" className="text-sm text-muted-foreground">Wait for the current wake request before changing this device.</Text> : null}
               <Button disabled={sending} onPress={() => setEditing(true)}><Text>Edit Device</Text></Button>
