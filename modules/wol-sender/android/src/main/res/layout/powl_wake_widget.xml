@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp" android:background="@drawable/powl_widget_background">
+    <TextView android:id="@+id/powl_widget_name" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="@string/powl_widget_unconfigured" android:textColor="#E1E8F0" android:textSize="18sp" android:textStyle="bold"
+        android:maxLines="2" android:ellipsize="end" />
+    <TextView android:id="@+id/powl_widget_status" android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:gravity="center_vertical" android:text="@string/powl_widget_setup"
+        android:textColor="#A3B0C2" android:textSize="12sp" android:maxLines="2" />
+    <Button android:id="@+id/powl_widget_wake" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:minHeight="48dp" android:text="@string/powl_widget_wake" android:textAllCaps="false"
+        android:backgroundTint="#26B2F2" android:textColor="#09111A" android:textSize="16sp" />
+</LinearLayout>

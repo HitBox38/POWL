@@ -1,172 +1,106 @@
-import { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { useRef, useState } from 'react';
+import { View, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, TextInput } from 'react-native';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
+import { SetupGuide } from '@/components/setup-guide';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { useDevicesStore } from '@/store/devices';
+import { useDevicesStore, type Device } from '@/store/devices';
+import { normalizeDeviceFields, normalizeMac, validateDeviceFields, type DeviceFields } from '@/lib/device-form';
 
-type AddDeviceSheetProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-};
+type AddDeviceSheetProps = { open: boolean; onOpenChange: (open: boolean) => void };
+type DeviceEditorSheetProps = AddDeviceSheetProps & { device?: Device };
+const EMPTY_FIELDS: DeviceFields = { name: '', macAddress: '', broadcastIp: '255.255.255.255' };
 
-const MAC_REGEX = /^([0-9A-Fa-f]{2}[:\-]){5}([0-9A-Fa-f]{2})$/;
-const IP_REGEX =
-  /^(25[0-5]|2[0-4]\d|[01]?\d\d?)\.(25[0-5]|2[0-4]\d|[01]?\d\d?)\.(25[0-5]|2[0-4]\d|[01]?\d\d?)\.(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+// Unmount the draft when closed so Cancel, X, Escape and Android Back all discard it.
+export function AddDeviceSheet(props: AddDeviceSheetProps) {
+  return <DeviceEditorSheet {...props} />;
+}
 
-type FieldErrors = {
-  name?: string;
-  macAddress?: string;
-  broadcastIp?: string;
-};
+export function DeviceEditorSheet(props: DeviceEditorSheetProps) {
+  return props.open ? <DeviceForm key={props.device?.id ?? 'new'} {...props} /> : null;
+}
 
-export function AddDeviceSheet({ open, onOpenChange }: AddDeviceSheetProps) {
-  const { addDevice } = useDevicesStore();
-
-  const [name, setName] = useState('');
-  const [macAddress, setMacAddress] = useState('');
-  const [broadcastIp, setBroadcastIp] = useState('255.255.255.255');
-  const [errors, setErrors] = useState<FieldErrors>({});
-
-  const validate = (): boolean => {
-    const newErrors: FieldErrors = {};
-
-    if (!name.trim()) {
-      newErrors.name = 'Device name is required';
-    }
-
-    if (!macAddress.trim()) {
-      newErrors.macAddress = 'MAC address is required';
-    } else if (!MAC_REGEX.test(macAddress.trim())) {
-      newErrors.macAddress = 'Format: AA:BB:CC:DD:EE:FF';
-    }
-
-    if (!broadcastIp.trim()) {
-      newErrors.broadcastIp = 'Broadcast IP is required';
-    } else if (!IP_REGEX.test(broadcastIp.trim())) {
-      newErrors.broadcastIp = 'Enter a valid IP address';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
+function DeviceForm({ open, onOpenChange, device }: DeviceEditorSheetProps) {
+  const devices = useDevicesStore((state) => state.devices);
+  const [fields, setFields] = useState<DeviceFields>(() => device ? { name: device.name, macAddress: device.macAddress, broadcastIp: device.broadcastIp } : EMPTY_FIELDS);
+  const [submitted, setSubmitted] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const profiles = useNetworkProfilesStore((state) => state.profiles);
+  const [networkProfileId, setNetworkProfileId] = useState(device?.networkProfileId);
+  const selectedProfile = profiles.find((profile) => profile.id === networkProfileId);
+  const { height } = useWindowDimensions();
+  const macInput = useRef<TextInput>(null);
+  const ipInput = useRef<TextInput>(null);
+  const effectiveFields = { ...fields, broadcastIp: selectedProfile?.broadcastIp ?? fields.broadcastIp };
+  const errors = submitted ? validateDeviceFields(effectiveFields, devices, device?.id) : {};
+  const change = (field: keyof DeviceFields, value: string) => setFields((previous) => ({ ...previous, [field]: value }));
   const handleAdd = () => {
-    if (!validate()) return;
-
-    addDevice({
-      name: name.trim(),
-      macAddress: macAddress.trim().toUpperCase(),
-      broadcastIp: broadcastIp.trim(),
-    });
-
-    handleClose();
-  };
-
-  const handleClose = () => {
-    setName('');
-    setMacAddress('');
-    setBroadcastIp('255.255.255.255');
-    setErrors({});
+    setSubmitted(true);
+    const validation = validateDeviceFields(effectiveFields, useDevicesStore.getState().devices, device?.id);
+    if (Object.keys(validation).length) {
+      if (validation.broadcastIp) setAdvancedOpen(true);
+      return;
+    }
+    const store = useDevicesStore.getState();
+    const savedFields = { ...normalizeDeviceFields(effectiveFields), networkProfileId: selectedProfile?.id };
+    if (device) {
+      const current = store.devices.find((item) => item.id === device.id);
+      if (!current || current.wakeStatus === 'sending') return;
+      store.updateDevice(device.id, savedFields);
+    } else {
+      store.addDevice(savedFields);
+    }
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border mx-4 rounded-2xl">
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-foreground text-xl font-bold">
-                Add Device
-              </DialogTitle>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={{ maxHeight: height * 0.7 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
+            <DialogHeader className="mb-4 pr-6">
+              <DialogTitle className="text-foreground text-xl font-bold">{device ? 'Edit Device' : 'Add Device'}</DialogTitle>
+              <DialogDescription>Wake a computer on your local network. Internet wake requires additional network configuration.</DialogDescription>
             </DialogHeader>
-
-            {/* Name field */}
+            {!device ? <SetupGuide /> : null}
             <View className="mb-4">
-              <Label className="text-foreground mb-1.5" nativeID="name-label">
-                Device Name
-              </Label>
-              <Input
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Gaming PC"
-                placeholderTextColor="hsl(215, 20%, 45%)"
-                className="bg-secondary border-border text-foreground"
-                accessibilityLabelledBy="name-label"
-              />
-              {errors.name ? (
-                <Text className="text-destructive text-xs mt-1">{errors.name}</Text>
-              ) : null}
+              <Label className="text-foreground mb-1.5" nativeID="name-label">Device Name</Label>
+              <Input value={fields.name} onChangeText={(value) => change('name', value)} placeholder="e.g. Gaming PC"
+                className="bg-secondary border-border text-foreground" accessibilityLabel="Device name" accessibilityLabelledBy="name-label"
+                autoCapitalize="words" autoCorrect={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => macInput.current?.focus()} aria-invalid={!!errors.name} />
+              {errors.name ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.name}</Text> : null}
             </View>
-
-            {/* MAC Address field */}
             <View className="mb-4">
-              <Label className="text-foreground mb-1.5" nativeID="mac-label">
-                MAC Address
-              </Label>
-              <Input
-                value={macAddress}
-                onChangeText={setMacAddress}
-                placeholder="AA:BB:CC:DD:EE:FF"
-                placeholderTextColor="hsl(215, 20%, 45%)"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                className="bg-secondary border-border text-foreground font-mono"
-                accessibilityLabelledBy="mac-label"
-              />
-              {errors.macAddress ? (
-                <Text className="text-destructive text-xs mt-1">{errors.macAddress}</Text>
-              ) : null}
+              <Label className="text-foreground mb-1.5" nativeID="mac-label">MAC Address</Label>
+              <Input ref={macInput} value={fields.macAddress} onChangeText={(value) => change('macAddress', value)} onBlur={() => change('macAddress', normalizeMac(fields.macAddress))}
+                placeholder="AA:BB:CC:DD:EE:FF" autoCapitalize="characters" autoCorrect={false} spellCheck={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => advancedOpen && !selectedProfile ? ipInput.current?.focus() : handleAdd()}
+                className="bg-secondary border-border text-foreground font-mono" accessibilityLabel="MAC address" accessibilityLabelledBy="mac-label" aria-invalid={!!errors.macAddress} />
+              {errors.macAddress ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.macAddress}</Text> : null}
             </View>
-
-            {/* Broadcast IP field */}
-            <View className="mb-6">
-              <Label className="text-foreground mb-1.5" nativeID="ip-label">
-                Broadcast IP
-              </Label>
-              <Input
-                value={broadcastIp}
-                onChangeText={setBroadcastIp}
-                placeholder="255.255.255.255"
-                placeholderTextColor="hsl(215, 20%, 45%)"
-                keyboardType="decimal-pad"
-                autoCorrect={false}
-                className="bg-secondary border-border text-foreground font-mono"
-                accessibilityLabelledBy="ip-label"
-              />
-              {errors.broadcastIp ? (
-                <Text className="text-destructive text-xs mt-1">{errors.broadcastIp}</Text>
-              ) : null}
-              <Text className="text-muted-foreground text-xs mt-1">
-                Use 192.168.x.255 for subnet broadcast
-              </Text>
-            </View>
-
+            <Button variant="ghost" className="mb-2 items-start" accessibilityState={{ expanded: advancedOpen }} onPress={() => setAdvancedOpen(!advancedOpen)}>
+              <Text className="text-primary">{advancedOpen ? 'Hide Advanced' : 'Advanced · broadcast settings'}</Text>
+            </Button>
+            {advancedOpen ? <View className="mb-6">
+              <Text className="text-sm font-semibold text-foreground mb-2">Network profile</Text>
+              <View className="gap-2 mb-4">
+                <Button variant={!selectedProfile ? 'default' : 'outline'} accessibilityState={{ selected: !selectedProfile }} onPress={() => setNetworkProfileId(undefined)}><Text>Device-specific settings</Text></Button>
+                {profiles.map((profile) => <Button key={profile.id} variant={networkProfileId === profile.id ? 'default' : 'outline'} accessibilityState={{ selected: networkProfileId === profile.id }} onPress={() => { setNetworkProfileId(profile.id); change('broadcastIp', profile.broadcastIp); }}><Text>{profile.name}</Text></Button>)}
+                <Text className="text-sm text-muted-foreground">Manage shared settings from Networks on the home screen.</Text>
+              </View>
+              <Label className="text-foreground mb-1.5" nativeID="ip-label">Broadcast IP</Label>
+              <Input ref={ipInput} editable={!selectedProfile} value={selectedProfile?.broadcastIp ?? fields.broadcastIp} onChangeText={(value) => change('broadcastIp', value)} placeholder="255.255.255.255"
+                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad'} autoCapitalize="none" autoCorrect={false} spellCheck={false}
+                returnKeyType="done" onSubmitEditing={handleAdd} className="bg-secondary border-border text-foreground font-mono"
+                accessibilityLabel="Broadcast IP address" accessibilityLabelledBy="ip-label" aria-invalid={!!errors.broadcastIp} />
+              {errors.broadcastIp ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.broadcastIp}</Text> : null}
+              <Text className="text-sm text-muted-foreground mt-2">The default sends to your local network. If it does not work, ask your network administrator for the subnet broadcast address. It depends on the subnet mask and does not always end in .255. Guest Wi-Fi or network isolation may block wake packets.</Text>
+            </View> : <Text className="text-sm text-muted-foreground mb-4">{selectedProfile ? selectedProfile.name + ' broadcast: ' : 'Using local broadcast: '}{selectedProfile?.broadcastIp ?? fields.broadcastIp}</Text>}
             <DialogFooter className="flex-row gap-3">
-              <DialogClose asChild>
-                <Button
-                  variant="outline"
-                  className="flex-1 border-border"
-                  onPress={handleClose}
-                >
-                  <Text className="text-foreground">Cancel</Text>
-                </Button>
-              </DialogClose>
-              <Button className="flex-1 bg-primary" onPress={handleAdd}>
-                <Text className="text-primary-foreground font-semibold">Add Device</Text>
-              </Button>
+              <Button variant="outline" className="flex-1 border-border" onPress={() => onOpenChange(false)}><Text className="text-foreground">Cancel</Text></Button>
+              <Button className="flex-1 bg-primary" onPress={handleAdd}><Text className="text-primary-foreground font-semibold">{device ? 'Save Changes' : 'Add Device'}</Text></Button>
             </DialogFooter>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -174,3 +108,5 @@ export function AddDeviceSheet({ open, onOpenChange }: AddDeviceSheetProps) {
     </Dialog>
   );
 }
+
+
