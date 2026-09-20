@@ -33,13 +33,11 @@ export default function HomeScreen() {
       {/* Device list */}
       {devices.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8 gap-3">
-          <Text className="text-5xl">
-          </Text>
           <Text className="text-xl font-semibold text-foreground text-center">
-            No devices yet
+            Wake your computer from your phone
           </Text>
           <Text className="text-muted-foreground text-center text-sm leading-relaxed">
-            Add a device with its MAC address and broadcast IP to wake it remotely.
+            Connect to the same local network and add your computer’s MAC address. We’ll help you set it up and test your first wake.
           </Text>
           <Button
             onPress={() => setAddSheetOpen(true)}
