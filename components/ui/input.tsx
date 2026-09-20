@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Platform, TextInput } from 'react-native';
 
-function Input({ className, ...props }: React.ComponentProps<typeof TextInput>) {
+function Input({ className, ...props }: React.ComponentPropsWithRef<typeof TextInput>) {
   return (
     <TextInput
       className={cn(
@@ -27,3 +27,4 @@ function Input({ className, ...props }: React.ComponentProps<typeof TextInput>) 
 }
 
 export { Input };
+
