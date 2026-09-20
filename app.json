@@ -27,6 +27,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      ["expo-camera", { "cameraPermission": "Allow POWL to scan device transfer QR codes.", "recordAudioAndroid": false }],
       "expo-router",
       [
         "expo-splash-screen",

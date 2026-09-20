@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="powl_widget_label">POWL Wake</string>
+    <string name="powl_widget_description">Wake your selected computer with one tap.</string>
+    <string name="powl_widget_unconfigured">POWL</string>
+    <string name="powl_widget_setup">Open POWL to select a device.</string>
+    <string name="powl_widget_ready">Ready to send a wake request</string>
+    <string name="powl_widget_wake">Wake</string>
+    <string name="powl_widget_open">Open POWL</string>
+    <string name="powl_widget_sending">Sending wake request…</string>
+    <string name="powl_widget_sent">Sent at %1$s · Wake not confirmed</string>
+    <string name="powl_widget_failed">Could not send. Open POWL for help.</string>
+</resources>
