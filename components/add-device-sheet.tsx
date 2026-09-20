@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, TextInput } from 'react-native';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useNetworkProfilesStore } from '@/store/network-profiles';
+import { SetupGuide } from '@/components/setup-guide';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,21 +27,31 @@ function DeviceForm({ open, onOpenChange, device }: DeviceEditorSheetProps) {
   const devices = useDevicesStore((state) => state.devices);
   const [fields, setFields] = useState<DeviceFields>(() => device ? { name: device.name, macAddress: device.macAddress, broadcastIp: device.broadcastIp } : EMPTY_FIELDS);
   const [submitted, setSubmitted] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const profiles = useNetworkProfilesStore((state) => state.profiles);
+  const [networkProfileId, setNetworkProfileId] = useState(device?.networkProfileId);
+  const selectedProfile = profiles.find((profile) => profile.id === networkProfileId);
   const { height } = useWindowDimensions();
   const macInput = useRef<TextInput>(null);
   const ipInput = useRef<TextInput>(null);
-  const errors = submitted ? validateDeviceFields(fields, devices, device?.id) : {};
+  const effectiveFields = { ...fields, broadcastIp: selectedProfile?.broadcastIp ?? fields.broadcastIp };
+  const errors = submitted ? validateDeviceFields(effectiveFields, devices, device?.id) : {};
   const change = (field: keyof DeviceFields, value: string) => setFields((previous) => ({ ...previous, [field]: value }));
   const handleAdd = () => {
     setSubmitted(true);
-    if (Object.keys(validateDeviceFields(fields, useDevicesStore.getState().devices, device?.id)).length) return;
+    const validation = validateDeviceFields(effectiveFields, useDevicesStore.getState().devices, device?.id);
+    if (Object.keys(validation).length) {
+      if (validation.broadcastIp) setAdvancedOpen(true);
+      return;
+    }
     const store = useDevicesStore.getState();
+    const savedFields = { ...normalizeDeviceFields(effectiveFields), networkProfileId: selectedProfile?.id };
     if (device) {
       const current = store.devices.find((item) => item.id === device.id);
       if (!current || current.wakeStatus === 'sending') return;
-      store.updateDevice(device.id, normalizeDeviceFields(fields));
+      store.updateDevice(device.id, savedFields);
     } else {
-      store.addDevice(normalizeDeviceFields(fields));
+      store.addDevice(savedFields);
     }
     onOpenChange(false);
   };
@@ -51,8 +63,9 @@ function DeviceForm({ open, onOpenChange, device }: DeviceEditorSheetProps) {
           <ScrollView style={{ maxHeight: height * 0.7 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
             <DialogHeader className="mb-4 pr-6">
               <DialogTitle className="text-foreground text-xl font-bold">{device ? 'Edit Device' : 'Add Device'}</DialogTitle>
-              <DialogDescription>Save the network details for your computer.</DialogDescription>
+              <DialogDescription>Wake a computer on your local network. Internet wake requires additional network configuration.</DialogDescription>
             </DialogHeader>
+            {!device ? <SetupGuide /> : null}
             <View className="mb-4">
               <Label className="text-foreground mb-1.5" nativeID="name-label">Device Name</Label>
               <Input value={fields.name} onChangeText={(value) => change('name', value)} placeholder="e.g. Gaming PC"
@@ -63,18 +76,28 @@ function DeviceForm({ open, onOpenChange, device }: DeviceEditorSheetProps) {
             <View className="mb-4">
               <Label className="text-foreground mb-1.5" nativeID="mac-label">MAC Address</Label>
               <Input ref={macInput} value={fields.macAddress} onChangeText={(value) => change('macAddress', value)} onBlur={() => change('macAddress', normalizeMac(fields.macAddress))}
-                placeholder="AA:BB:CC:DD:EE:FF" autoCapitalize="characters" autoCorrect={false} spellCheck={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => ipInput.current?.focus()}
+                placeholder="AA:BB:CC:DD:EE:FF" autoCapitalize="characters" autoCorrect={false} spellCheck={false} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => advancedOpen && !selectedProfile ? ipInput.current?.focus() : handleAdd()}
                 className="bg-secondary border-border text-foreground font-mono" accessibilityLabel="MAC address" accessibilityLabelledBy="mac-label" aria-invalid={!!errors.macAddress} />
               {errors.macAddress ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.macAddress}</Text> : null}
             </View>
-            <View className="mb-6">
+            <Button variant="ghost" className="mb-2 items-start" accessibilityState={{ expanded: advancedOpen }} onPress={() => setAdvancedOpen(!advancedOpen)}>
+              <Text className="text-primary">{advancedOpen ? 'Hide Advanced' : 'Advanced · broadcast settings'}</Text>
+            </Button>
+            {advancedOpen ? <View className="mb-6">
+              <Text className="text-sm font-semibold text-foreground mb-2">Network profile</Text>
+              <View className="gap-2 mb-4">
+                <Button variant={!selectedProfile ? 'default' : 'outline'} accessibilityState={{ selected: !selectedProfile }} onPress={() => setNetworkProfileId(undefined)}><Text>Device-specific settings</Text></Button>
+                {profiles.map((profile) => <Button key={profile.id} variant={networkProfileId === profile.id ? 'default' : 'outline'} accessibilityState={{ selected: networkProfileId === profile.id }} onPress={() => { setNetworkProfileId(profile.id); change('broadcastIp', profile.broadcastIp); }}><Text>{profile.name}</Text></Button>)}
+                <Text className="text-sm text-muted-foreground">Manage shared settings from Networks on the home screen.</Text>
+              </View>
               <Label className="text-foreground mb-1.5" nativeID="ip-label">Broadcast IP</Label>
-              <Input ref={ipInput} value={fields.broadcastIp} onChangeText={(value) => change('broadcastIp', value)} placeholder="255.255.255.255"
+              <Input ref={ipInput} editable={!selectedProfile} value={selectedProfile?.broadcastIp ?? fields.broadcastIp} onChangeText={(value) => change('broadcastIp', value)} placeholder="255.255.255.255"
                 keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad'} autoCapitalize="none" autoCorrect={false} spellCheck={false}
                 returnKeyType="done" onSubmitEditing={handleAdd} className="bg-secondary border-border text-foreground font-mono"
                 accessibilityLabel="Broadcast IP address" accessibilityLabelledBy="ip-label" aria-invalid={!!errors.broadcastIp} />
               {errors.broadcastIp ? <Text accessibilityLiveRegion="polite" className="text-destructive text-sm mt-1">{errors.broadcastIp}</Text> : null}
-            </View>
+              <Text className="text-sm text-muted-foreground mt-2">The default sends to your local network. If it does not work, ask your network administrator for the subnet broadcast address. It depends on the subnet mask and does not always end in .255. Guest Wi-Fi or network isolation may block wake packets.</Text>
+            </View> : <Text className="text-sm text-muted-foreground mb-4">{selectedProfile ? selectedProfile.name + ' broadcast: ' : 'Using local broadcast: '}{selectedProfile?.broadcastIp ?? fields.broadcastIp}</Text>}
             <DialogFooter className="flex-row gap-3">
               <Button variant="outline" className="flex-1 border-border" onPress={() => onOpenChange(false)}><Text className="text-foreground">Cancel</Text></Button>
               <Button className="flex-1 bg-primary" onPress={handleAdd}><Text className="text-primary-foreground font-semibold">{device ? 'Save Changes' : 'Add Device'}</Text></Button>

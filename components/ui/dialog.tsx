@@ -3,7 +3,7 @@ import { NativeOnlyAnimatedView } from '@/components/ui/native-only-animated-vie
 import { cn } from '@/lib/utils';
 import * as DialogPrimitive from '@rn-primitives/dialog';
 import * as React from 'react';
-import { Platform, Text, View, type ViewProps } from 'react-native';
+import { Platform, Text, View, useWindowDimensions, type ViewProps } from 'react-native';
 import { FadeIn, FadeOut } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
 
@@ -30,14 +30,14 @@ function DialogOverlay({
         className={cn(
           'absolute bottom-0 left-0 right-0 top-0 flex items-center justify-center bg-black/50 p-2',
           Platform.select({
-            web: 'animate-in fade-in-0 fixed cursor-default [&>*]:cursor-auto',
+            web: 'animate-in fade-in-0 fixed cursor-default [&>*]:cursor-auto [&>*]:w-full [&>*]:max-w-lg',
           }),
           className
         )}
         {...props}
         asChild={Platform.OS !== 'web'}>
         <NativeOnlyAnimatedView entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
-          <NativeOnlyAnimatedView entering={FadeIn.delay(50)} exiting={FadeOut.duration(150)}>
+          <NativeOnlyAnimatedView className="w-full max-w-lg" entering={FadeIn.delay(50)} exiting={FadeOut.duration(150)}>
             <>{children}</>
           </NativeOnlyAnimatedView>
         </NativeOnlyAnimatedView>
@@ -48,15 +48,18 @@ function DialogOverlay({
 function DialogContent({
   className,
   portalHost,
+  style,
   children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
     portalHost?: string;
   }) {
+  const { height } = useWindowDimensions();
   return (
     <DialogPortal hostName={portalHost}>
       <DialogOverlay>
         <DialogPrimitive.Content
+          style={[{ maxHeight: height * 0.9 }, style]}
           className={cn(
             'bg-background border-border z-50 mx-auto flex w-full max-w-[calc(100%-2rem)] flex-col gap-4 rounded-lg border p-6 shadow-lg shadow-black/5 sm:max-w-lg',
             Platform.select({
@@ -68,12 +71,12 @@ function DialogContent({
           <>{children}</>
           <DialogPrimitive.Close
             className={cn(
-              'absolute right-4 top-4 rounded opacity-70 active:opacity-100',
+              'absolute right-2 top-2 min-h-12 min-w-12 items-center justify-center rounded opacity-70 active:opacity-100',
               Platform.select({
                 web: 'ring-offset-background focus:ring-ring data-[state=open]:bg-accent transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2',
               })
             )}
-            hitSlop={12}>
+            accessibilityLabel="Close dialog">
             <Icon
               name="close"
               size={16}
@@ -89,7 +92,7 @@ function DialogContent({
 
 function DialogHeader({ className, ...props }: ViewProps) {
   return (
-    <View className={cn('flex flex-col gap-2 text-center sm:text-left', className)} {...props} />
+    <View className={cn('flex flex-col gap-2 pr-10 text-center sm:text-left', className)} {...props} />
   );
 }
 
