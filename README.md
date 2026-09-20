@@ -1,4 +1,26 @@
-# Welcome to your Expo app 👋
+# POWL
+
+## Install a development APK on Android
+
+Every push to `dev` runs the [Android APK workflow](https://github.com/HitBox38/POWL/actions/workflows/android-apk.yml) and produces a standalone APK, including the native Wake-on-LAN module. It runs without Expo Go, Metro, or a computer connected to your phone.
+
+1. Open the workflow link and select the latest successful run for `dev`.
+2. Under **Artifacts**, download `POWL-dev-<run number>` while signed in to GitHub.
+3. Extract the ZIP and open the `.apk` on your Android phone. Allow installation from your browser or file manager if Android prompts you.
+
+Artifacts are kept for 30 days. The APK supports ARM64 and ARMv7 phones. For Wake-on-LAN, connect your phone to the target computer's network and enable Wake-on-LAN on that computer.
+
+The workflow builds the release variant so JavaScript and assets are bundled, and signs it with the debug key included in Expo's Android template. This is for personal testing; a Play Store release needs a private release signing key. No Expo account or repository secrets are needed. Builds using the same signing key can update the existing installation. If an older local installation used a different key, Android requires uninstalling it first, which clears its saved devices.
+
+To build the next version, commit your changes on `dev` and push:
+
+```bash
+git push origin dev
+```
+
+The workflow uses `npm ci` with `package-lock.json`; update that lockfile when changing dependencies.
+
+## Expo development
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
