@@ -30,6 +30,7 @@ export type Device = {
 type DevicesState = {
   devices: Device[];
   addDevice: (device: Omit<Device, 'id' | 'wakeStatus' | 'wakeError' | 'lastWakeRequest' | 'wakeHistory'>) => void;
+  addDevices: (devices: Pick<Device, 'name' | 'macAddress' | 'broadcastIp'>[]) => void;
   removeDevice: (id: string) => void;
   updateDevice: (id: string, updates: Partial<Pick<Device, 'name' | 'macAddress' | 'broadcastIp'>>) => void;
   setWakeStatus: (id: string, status: WakeStatus, error?: string) => void;
@@ -48,11 +49,19 @@ export const useDevicesStore = create<DevicesState>()(
             ...state.devices,
             {
               ...device,
-              id: Date.now().toString(),
+              id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
               wakeStatus: 'idle' as WakeStatus,
             },
           ],
         })),
+
+      addDevices: (devices) => set((state) => ({
+        devices: [...state.devices, ...devices.map((device, index) => ({
+          ...device,
+          id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+          wakeStatus: 'idle' as WakeStatus,
+        }))],
+      })),
 
       removeDevice: (id) =>
         set((state) => ({
