@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sendMagicPacket } from '@/modules/wol-sender';
 
 export type WakeStatus = 'idle' | 'sending' | 'success' | 'error';
+export const WAKE_HISTORY_LIMIT = 20;
 
 export type WakeRequest = {
   requestedAt: string;
@@ -23,15 +24,17 @@ export type Device = {
   wakeError?: string;
   /** The last completed send attempt. This does not confirm the computer woke. */
   lastWakeRequest?: WakeRequest;
+  wakeHistory?: WakeRequest[];
 };
 
 type DevicesState = {
   devices: Device[];
-  addDevice: (device: Omit<Device, 'id' | 'wakeStatus' | 'wakeError' | 'lastWakeRequest'>) => void;
+  addDevice: (device: Omit<Device, 'id' | 'wakeStatus' | 'wakeError' | 'lastWakeRequest' | 'wakeHistory'>) => void;
   removeDevice: (id: string) => void;
   updateDevice: (id: string, updates: Partial<Pick<Device, 'name' | 'macAddress' | 'broadcastIp'>>) => void;
   setWakeStatus: (id: string, status: WakeStatus, error?: string) => void;
   wakeDevice: (id: string) => Promise<void>;
+  clearWakeHistory: (id: string) => void;
 };
 
 export const useDevicesStore = create<DevicesState>()(
@@ -103,9 +106,20 @@ export const useDevicesStore = create<DevicesState>()(
             wakeStatus: request.result === 'sent' ? 'success' : 'error',
             wakeError: request.error,
             lastWakeRequest: request,
+            wakeHistory: [request, ...(item.wakeHistory ?? (item.lastWakeRequest ? [item.lastWakeRequest] : []))].slice(0, WAKE_HISTORY_LIMIT),
           } : item),
         }));
       },
+
+      clearWakeHistory: (id) => set((state) => ({
+        devices: state.devices.map((item) => item.id === id ? {
+          ...item,
+          wakeHistory: [],
+          lastWakeRequest: undefined,
+          wakeError: undefined,
+          wakeStatus: item.wakeStatus === 'sending' ? 'sending' : 'idle',
+        } : item),
+      })),
     }),
     {
       name: 'powl-devices',

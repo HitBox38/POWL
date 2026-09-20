@@ -8,6 +8,7 @@ import { getWakeUnavailableReason } from '@/modules/wol-sender';
 import { DeviceDetailsSheet } from '@/components/device-details-sheet';
 import { cn } from '@/lib/cn';
 import { TroubleshootSheet } from '@/components/troubleshoot-sheet';
+import { WakeHistorySheet } from '@/components/wake-history-sheet';
 
 type DeviceCardProps = {
   device: Device;
@@ -41,6 +42,7 @@ const STATUS_CONFIG: Record<
 
 export function DeviceCard({ device }: DeviceCardProps) {
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const wakeUnavailableReason = getWakeUnavailableReason();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const wakeDevice = useDevicesStore((state) => state.wakeDevice);
@@ -125,14 +127,24 @@ export function DeviceCard({ device }: DeviceCardProps) {
             </Pressable>
           </View>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Troubleshoot waking ${device.name}`}
-          onPress={() => setShowTroubleshooting(true)}
-          className="min-h-12 justify-center mt-1 active:opacity-60"
-        >
-          <Text className="text-sm text-primary">Troubleshoot</Text>
-        </Pressable>
+        <View className="flex-row flex-wrap gap-x-6">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Troubleshoot waking ${device.name}`}
+            onPress={() => setShowTroubleshooting(true)}
+            className="min-h-12 justify-center mt-1 active:opacity-60"
+          >
+            <Text className="text-sm text-primary">Troubleshoot</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Wake history for ${device.name}`}
+            onPress={() => setShowHistory(true)}
+            className="min-h-12 justify-center mt-1 active:opacity-60"
+          >
+            <Text className="text-sm text-primary">Wake history</Text>
+          </Pressable>
+        </View>
         {showTroubleshooting ? (
           <TroubleshootSheet
             device={device}
@@ -140,6 +152,9 @@ export function DeviceCard({ device }: DeviceCardProps) {
             onOpenChange={setShowTroubleshooting}
             onRetry={handleWake}
           />
+        ) : null}
+        {showHistory ? (
+          <WakeHistorySheet device={device} open={showHistory} onOpenChange={setShowHistory} />
         ) : null}
       </CardContent>
       <DeviceDetailsSheet device={device} open={detailsOpen} onOpenChange={setDetailsOpen} />
