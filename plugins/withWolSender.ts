@@ -25,6 +25,20 @@ const withWolSender: ConfigPlugin = (config) => {
       }
     }
 
+    const application = manifest.application?.[0];
+    if (!application) throw new Error('Wake widget requires an Android application manifest.');
+    application.receiver ??= [];
+    const receiverName = 'expo.modules.wolsender.WakeWidgetProvider';
+    if (!application.receiver.some((receiver) => receiver.$?.['android:name'] === receiverName)) {
+      // Config-plugin types omit valid receiver label/metadata attributes.
+      const widgetReceiver = {
+        $: { 'android:label': '@string/powl_widget_label', 'android:name': receiverName, 'android:exported': 'false' as const },
+        'intent-filter': [{ action: [{ $: { 'android:name': 'android.appwidget.action.APPWIDGET_UPDATE' } }] }],
+        'meta-data': [{ $: { 'android:name': 'android.appwidget.provider', 'android:resource': '@xml/powl_wake_widget' } }],
+      };
+      application.receiver.push(widgetReceiver);
+    }
+
     return modConfig;
   });
 };
