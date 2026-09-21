@@ -11,6 +11,10 @@ Built with Expo, React Native, and TypeScript, with a Kotlin module for sending 
 - Keep your device list across app restarts using Zustand and AsyncStorage.
 - Send Wake-on-LAN packets with one tap and see sending, success, or error feedback.
 - Retry failed sends and remove saved devices with confirmation.
+- Favorite and group devices, wake a group, and select saved network profiles manually.
+- Review per-device wake history and setup/troubleshooting help.
+- Import/export device backups, transfer a device by QR code, and configure the Android home-screen widget.
+- Choose System, Light, or Dark appearance.
 
 **“Packet sent!” means the packet was sent, not that the computer is online.** POWL does not monitor device availability or confirm that a computer woke up.
 
@@ -18,7 +22,7 @@ Built with Expo, React Native, and TypeScript, with a Kotlin module for sending 
 
 1. Enable Wake-on-LAN on the target computer in its firmware and network adapter settings, as supported by the hardware.
 2. Connect your Android phone to the same local network as the computer.
-3. Tap **+ Add Device** and enter:
+3. Tap **Add device** and enter:
 
    | Field | Example | Description |
    | --- | --- | --- |
@@ -26,7 +30,7 @@ Built with Expo, React Native, and TypeScript, with a Kotlin module for sending 
    | MAC Address | `AA:BB:CC:DD:EE:FF` | The MAC address of the target computer's network adapter. |
    | Broadcast IP | `255.255.255.255` | Defaults to the local broadcast address. A subnet broadcast address can also be supplied. |
 
-4. Tap **Add Device**, then **Wake** on its card.
+4. Tap **Save device**, then **Test wake** on its details page. Saving does not send a packet. Subsequent wakes take one tap from the device list.
 
 For a `192.168.1.0/24` network, the subnet broadcast address is `192.168.1.255`. Use the address appropriate to your network's subnet mask; it does not always end in `.255`.
 
@@ -97,15 +101,15 @@ There is no unified test script in `package.json`; focused checks live in `scrip
 
 The device card starts a wake action in the Zustand store, which calls the TypeScript wrapper in `modules/wol-sender` and invokes the Kotlin `WolSender` Expo module. The module builds a 102-byte magic packet: six `0xFF` bytes followed by the target MAC address repeated 16 times. It sends the packet through a broadcast-enabled UDP socket to the configured IP on **port 9**. The port is currently fixed.
 
-The `withWolSender` Expo config plugin adds the Android `INTERNET` and `CHANGE_WIFI_MULTICAST_STATE` permissions. Saved device details are persisted locally under the `powl-devices` storage key; send status and errors reset when the app restarts.
+The `withWolSender` Expo config plugin adds the Android `INTERNET` and `CHANGE_WIFI_MULTICAST_STATE` permissions. Saved device details are persisted locally under the `powl-devices` storage key; in-flight status resets when the app restarts; completed request history is retained.
 
 ## Project structure
 
 | Path | Purpose |
 | --- | --- |
-| `app/` | Expo Router layouts and the device-list screen. |
-| `components/add-device-sheet.tsx` | Add-device form and validation. |
-| `components/device-card.tsx` | Device details, wake action, send feedback, and removal. |
+| `app/` | Stack routes for Home, Settings, devices, networks, groups, transfers, and help. |
+| `components/add-device-sheet.tsx` | Full-screen add/edit form and validation. |
+| `components/device-card.tsx` | Compact device row with isolated subscriptions and one-tap wake. |
 | `components/ui/` | Shared UI primitives styled with NativeWind. |
 | `store/devices.ts` | Zustand device state and AsyncStorage persistence. |
 | `modules/wol-sender/` | TypeScript API and Android Kotlin magic-packet sender. |
@@ -113,3 +117,7 @@ The `withWolSender` Expo config plugin adds the Android `INTERNET` and `CHANGE_W
 | `assets/images/` | App icons, splash assets, and branding. |
 
 The app uses Expo SDK 54, React Native 0.81, React 19, Expo Router, NativeWind, and Zustand.
+
+## Navigation and compatibility
+
+Navigation uses Home + Settings with stack pages for longer tasks; Back returns to the previous page. Existing storage keys and the device transfer format are unchanged.

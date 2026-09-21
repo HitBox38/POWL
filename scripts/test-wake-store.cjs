@@ -250,3 +250,30 @@ test('removing a group member during send does not recreate it or misreport pack
   assert.equal(result.skipped, 0);
   assert.equal(store.getState().devices.length, 0);
 });
+
+test('adding a device returns its stable saved ID without sending a packet', async () => {
+  let sends = 0;
+  const { store, storage } = await createStore(async () => { sends++; });
+  const id = store.getState().addDevice({ name: 'New PC', macAddress: 'AA:BB:CC:DD:EE:FF', broadcastIp: '255.255.255.255' });
+  assert.equal(typeof id, 'string');
+  assert.equal(store.getState().devices[0].id, id);
+  assert.equal(store.getState().devices[0].wakeStatus, 'idle');
+  assert.equal(sends, 0);
+  const restarted = await createStore(async () => {}, storage.get('powl-devices'));
+  assert.equal(restarted.store.getState().devices[0].id, id);
+});
+
+test('a wake changes only its own device reference, preserving unrelated row subscriptions', async () => {
+  const { store } = await createStore(async () => {});
+  const first = store.getState().addDevice({ name: 'First', macAddress: 'AA:BB:CC:DD:EE:01', broadcastIp: '255.255.255.255' });
+  const second = store.getState().addDevice({ name: 'Second', macAddress: 'AA:BB:CC:DD:EE:02', broadcastIp: '255.255.255.255' });
+  const original = store.getState().devices.find(device => device.id === second);
+  let changes = 0;
+  const stop = store.subscribe(state => {
+    if (state.devices.find(device => device.id === second) !== original) changes++;
+  });
+  await store.getState().wakeDevice(first);
+  stop();
+  assert.equal(changes, 0);
+  assert.equal(store.getState().devices.find(device => device.id === first).lastWakeRequest.result, 'sent');
+});
