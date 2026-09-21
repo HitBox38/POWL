@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { useDevicesStore, type Device } from "@/store/devices";
+import { StatusTargetEditor } from "@/components/status-target-editor";
+import { statusTargetDraft, statusTargetFromDraft } from "@/lib/availability";
 import {
   normalizeDeviceFields,
   normalizeMac,
@@ -33,6 +35,8 @@ export function DeviceForm({ device }: { device?: Device }) {
       : EMPTY_FIELDS,
   );
   const [submitted, setSubmitted] = useState(false);
+  const [statusDraft, setStatusDraft] = useState(() => statusTargetDraft(device?.statusTarget));
+  const [statusError, setStatusError] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const profiles = useNetworkProfilesStore((state) => state.profiles);
   const [networkProfileId, setNetworkProfileId] = useState(
@@ -54,6 +58,9 @@ export function DeviceForm({ device }: { device?: Device }) {
     setFields((previous) => ({ ...previous, [field]: value }));
   const handleAdd = () => {
     setSubmitted(true);
+    let statusTarget;
+    try { statusTarget = statusTargetFromDraft(statusDraft); setStatusError(''); }
+    catch (error) { setStatusError(error instanceof Error ? error.message : 'Check your status settings.'); return; }
     const validation = validateDeviceFields(
       effectiveFields,
       useDevicesStore.getState().devices,
@@ -67,6 +74,7 @@ export function DeviceForm({ device }: { device?: Device }) {
     const savedFields = {
       ...normalizeDeviceFields(effectiveFields),
       networkProfileId: selectedProfile?.id,
+      statusTarget,
     };
     if (device) {
       const current = store.devices.find((item) => item.id === device.id);
@@ -260,6 +268,7 @@ export function DeviceForm({ device }: { device?: Device }) {
             {selectedProfile?.broadcastIp ?? fields.broadcastIp}
           </Text>
         )}
+        <StatusTargetEditor draft={statusDraft} onChange={draft => { setStatusDraft(draft); setStatusError(''); }} error={statusError} />
       </View>
     </Screen>
   );

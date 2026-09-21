@@ -3,6 +3,7 @@ const { withAndroidManifest } = require('expo/config-plugins');
 /**
  * Config plugin that adds required Android permissions for Wake-on-LAN UDP broadcast.
  * - INTERNET: required for any network socket
+ * - ACCESS_NETWORK_STATE: invalidate availability when the active network changes
  * - CHANGE_WIFI_MULTICAST_STATE: required to send broadcast/multicast on Wi-Fi
  */
 const withWolSender = (config) => {
@@ -17,6 +18,7 @@ const withWolSender = (config) => {
 
     const required = [
       'android.permission.INTERNET',
+      'android.permission.ACCESS_NETWORK_STATE',
       'android.permission.CHANGE_WIFI_MULTICAST_STATE',
     ];
 

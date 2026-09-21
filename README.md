@@ -16,7 +16,17 @@ Built with Expo, React Native, and TypeScript, with a Kotlin module for sending 
 - Import/export device backups, transfer a device by QR code, and configure the Android home-screen widget.
 - Choose System, Light, or Dark appearance.
 
-**“Packet sent!” means the packet was sent, not that the computer is online.** POWL does not monitor device availability or confirm that a computer woke up.
+**“Packet sent!” means the packet was sent, not that the computer is online.** Optional status checks independently show **Online**, **Not reachable**, or **Unknown** while POWL is open.
+
+### Device availability
+
+In Add/Edit device, open **Status checks → Find on network** while the computer is awake. POWL searches for advertised SMB, SSH, VNC, and HTTP services for up to 10 seconds. Select the correct computer by its advertised name, service, and address; discovery does not automatically match a MAC address. If it is missing, choose **Enter IP manually**, using the computer’s own IPv4 address and optionally an open TCP port. Use a stable IP or DHCP reservation for manual targets. IPv6-only discovery results are not supported in this version.
+
+POWL refreshes configured devices every 30 seconds while foregrounded. After sending a wake packet, it checks every three seconds for up to one minute, stopping the faster checks when a response arrives. Device details include **Check now**, the checked endpoint, and last check time. Checks stop in the background, respect selected network profiles, and reset when the network changes. The active connection must be local Wi-Fi or Ethernet; VPN/default cellular connections are reported as unavailable.
+
+**Online** means the selected service or manual address responded. **Not reachable** may mean sleep/shutdown, a stopped service, network isolation, or a firewall blocking probes; it does not prove the computer is off. **Unknown** covers missing setup, unavailable discovery/network access, and explicit permission errors. Status is never inferred from a sent wake packet. Discovered service addresses are refreshed and held only in memory. Saved status-check settings are included in backups and QR transfers; older backups still import without them. Older POWL versions ignore this optional field.
+
+Availability requires rebuilding the Android app with the native module. There is no background service, companion app, account, or backend.
 
 ## Using POWL
 
@@ -110,7 +120,7 @@ The optional icon-generation script uses the pinned `sharp` dev dependency: run 
 
 The device card starts a wake action in the Zustand store, which calls the TypeScript wrapper in `modules/wol-sender` and invokes the Kotlin `WolSender` Expo module. The module builds a 102-byte magic packet: six `0xFF` bytes followed by the target MAC address repeated 16 times. It sends the packet through a broadcast-enabled UDP socket to the configured IP on **port 9**. The port is currently fixed.
 
-The `withWolSender` Expo config plugin adds the Android `INTERNET` and `CHANGE_WIFI_MULTICAST_STATE` permissions. Saved device details are persisted locally under the `powl-devices` storage key; in-flight status resets when the app restarts; completed request history is retained.
+The `withWolSender` Expo config plugin adds the Android `INTERNET`, `ACCESS_NETWORK_STATE`, and `CHANGE_WIFI_MULTICAST_STATE` permissions. Saved device details are persisted locally under the `powl-devices` storage key; in-flight status resets when the app restarts; completed request history is retained. Availability results are transient and are never restored as current status.
 
 ## Project structure
 

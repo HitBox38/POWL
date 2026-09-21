@@ -8,6 +8,7 @@ import { useTheme } from "expo-router/react-navigation";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useReducedMotion } from "react-native-reanimated";
 import { DeviceDataGate } from "@/components/device-data-gate";
+import { AvailabilityMonitor } from "@/components/availability-monitor";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { goBack } from "@/components/screen";
@@ -20,6 +21,7 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <WakeWidgetSync />
         <DeviceDataGate>
+          <AvailabilityMonitor />
           <Navigation />
         </DeviceDataGate>
         <PortalHost />

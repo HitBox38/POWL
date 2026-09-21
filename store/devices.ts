@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { sendMagicPacket } from "@/modules/wol-sender";
 import { useNetworkProfilesStore } from "@/store/network-profiles";
 import { getNetworkMismatch, resolveBroadcastIp } from "@/lib/network-profiles";
+import type { StatusTarget } from "@/lib/availability";
 
 export type WakeStatus = "idle" | "sending" | "success" | "error";
 export const WAKE_HISTORY_LIMIT = 20;
@@ -24,6 +25,7 @@ export type Device = {
   macAddress: string;
   broadcastIp: string;
   networkProfileId?: string;
+  statusTarget?: StatusTarget;
   isFavorite?: boolean;
   groupId?: string;
   /** Sending is transient; restart restores only the last completed result. */
@@ -44,14 +46,14 @@ type DevicesState = {
     >,
   ) => string;
   addDevices: (
-    devices: Pick<Device, "name" | "macAddress" | "broadcastIp">[],
+    devices: Pick<Device, "name" | "macAddress" | "broadcastIp" | "statusTarget">[],
   ) => void;
   removeDevice: (id: string) => void;
   removeNetworkProfile: (id: string) => void;
   updateDevice: (
     id: string,
     updates: Partial<
-      Pick<Device, "name" | "macAddress" | "broadcastIp" | "networkProfileId">
+      Pick<Device, "name" | "macAddress" | "broadcastIp" | "networkProfileId" | "statusTarget">
     >,
   ) => void;
   setWakeStatus: (id: string, status: WakeStatus, error?: string) => void;

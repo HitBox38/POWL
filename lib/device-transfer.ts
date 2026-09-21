@@ -1,6 +1,7 @@
 import createQrCode from 'qrcode-generator';
+import { parseStatusTarget, type StatusTarget } from './availability.ts';
 
-export type TransferDevice = { name: string; macAddress: string; broadcastIp: string };
+export type TransferDevice = { name: string; macAddress: string; broadcastIp: string; statusTarget?: StatusTarget };
 
 const MAX_DEVICES = 100;
 const MAX_TEXT_LENGTH = 100_000;
@@ -24,7 +25,8 @@ function validateDevice(value: unknown): TransferDevice {
   if (ip.length !== 4 || ip.some(part => !/^\d{1,3}$/.test(part) || Number(part) > 255)) {
     throw new Error('Each device needs a valid IPv4 broadcast address.');
   }
-  return { name: device.name.trim(), macAddress: canonicalMac(device.macAddress), broadcastIp: ip.map(Number).join('.') };
+  const statusTarget = parseStatusTarget(device.statusTarget);
+  return { name: device.name.trim(), macAddress: canonicalMac(device.macAddress), broadcastIp: ip.map(Number).join('.'), ...(statusTarget ? { statusTarget } : {}) };
 }
 
 export function exportDevices(devices: TransferDevice[]): string {

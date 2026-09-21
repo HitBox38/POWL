@@ -35,6 +35,11 @@ export default function SetupHelpScreen() {
           computer directly to see whether it wakes.
         </Text>
       </Section>
+      <Section title="4 · Check availability">
+        <Text className="leading-6">In Add or Edit device, use Status checks → Find on network while your computer is awake. Select its file sharing, SSH, VNC, or HTTP service. Computers that do not advertise a service may not appear; use Enter IP manually instead.</Text>
+        <Text className="leading-6">For manual checks, use the computer’s own IPv4 address and optionally an open TCP port. A router DHCP reservation keeps its address stable. POWL checks while open, including faster checks after a wake request.</Text>
+        <Text className="leading-6">Online means the configured address or service responded. Not reachable can mean sleep, shutdown, a firewall, or a stopped service. It does not prove the computer is off. Unknown means a check is not currently possible.</Text>
+      </Section>
       <Section title="If it stays asleep">
         <Text className="leading-6">
           Guest Wi-Fi, VPNs, and router isolation can block packets. Check your
@@ -42,7 +47,7 @@ export default function SetupHelpScreen() {
           from the device for more help.
         </Text>
         <Text className="text-muted-foreground leading-6">
-          POWL sends a request; it cannot detect whether your computer is awake.
+          A sent wake request does not confirm the computer woke. Optional status checks report network reachability separately.
           Your saved devices stay on this phone.
         </Text>
       </Section>

@@ -40,6 +40,21 @@ async function createStore(sender, saved, network = { profiles: [], activeProfil
 
 const device = { id: 'computer', name: 'Computer', macAddress: 'AA:BB:CC:DD:EE:FF', broadcastIp: '255.255.255.255', wakeStatus: 'idle' };
 
+test('status configuration persists, imports in bulk, and can be removed without changing wake settings', async () => {
+  const { store, storage } = await createStore(async () => {});
+  const statusTarget = { kind: 'manual', ip: '192.168.1.10', port: 22 };
+  const id = store.getState().addDevice({ name: device.name, macAddress: device.macAddress, broadcastIp: device.broadcastIp, statusTarget });
+  const restored = await createStore(async () => {}, storage.get('powl-devices'));
+  assert.deepEqual(restored.store.getState().devices[0].statusTarget, statusTarget);
+  store.getState().updateDevice(id, { statusTarget: undefined });
+  assert.equal(store.getState().devices[0].broadcastIp, device.broadcastIp);
+  assert.equal(store.getState().devices[0].macAddress, device.macAddress);
+  const removed = await createStore(async () => {}, storage.get('powl-devices'));
+  assert.equal(removed.store.getState().devices[0].statusTarget, undefined);
+  store.getState().addDevices([{ name: 'Imported', macAddress: 'AA:BB:CC:DD:EE:00', broadcastIp: device.broadcastIp, statusTarget }]);
+  assert.deepEqual(store.getState().devices[1].statusTarget, statusTarget);
+});
+
 test('profile destinations are sent and recorded; mismatched networks do not send', async () => {
   const destinations = [];
   const network = { profiles: [{ id: 'home', name: 'Home', broadcastIp: '192.168.4.255' }], activeProfileId: 'home' };

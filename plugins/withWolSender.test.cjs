@@ -21,8 +21,8 @@ test('registers a private widget receiver and preserves other app components', a
   assert.equal(widget.$['android:exported'], 'false');
   assert.equal(widget.$['android:name'], 'expo.modules.wolsender.WakeWidgetProvider');
   assert.equal(widget['meta-data'][0].$['android:resource'], '@xml/powl_wake_widget');
-  assert.equal(result['uses-permission'].length, 2);
+  assert.equal(result['uses-permission'].length, 3);
   await applyPlugin(result);
   assert.equal(result.application[0].receiver.length, 2);
-  assert.equal(result['uses-permission'].length, 2);
+  assert.equal(result['uses-permission'].length, 3);
 });

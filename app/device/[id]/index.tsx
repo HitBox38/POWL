@@ -17,6 +17,7 @@ import { useDevicesStore, type Device } from "@/store/devices";
 import { useNetworkProfilesStore } from "@/store/network-profiles";
 import { resolveBroadcastIp } from "@/lib/network-profiles";
 import { wakeStatusLabel } from "@/lib/wake-status";
+import { DeviceAvailability } from "@/components/device-availability";
 
 export default function DeviceDetailsScreen() {
   const device = useRouteDevice();
@@ -85,6 +86,9 @@ function DeviceDetails({ device }: { device: Device }) {
           </Text>
         ) : null}
       </View>
+      <Section title="Availability">
+        <DeviceAvailability device={device} details />
+      </Section>
       <Section title="Saved details">
         <View className="border-t border-border">
           <View className="flex-row items-center justify-between py-3 border-b border-border gap-3">

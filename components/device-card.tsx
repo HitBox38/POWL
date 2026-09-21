@@ -7,6 +7,8 @@ import { WakeButton, useWakeBlocker } from "@/components/wake-button";
 import { useDevicesStore, type Device } from "@/store/devices";
 import { useNetworkProfilesStore } from "@/store/network-profiles";
 import { wakeStatusLabel } from "@/lib/wake-status";
+import { DeviceAvailability } from "@/components/device-availability";
+import { useAvailabilityStore } from "@/store/availability";
 
 export const DeviceCard = memo(function DeviceCard({ id }: { id: string }) {
   const device = useDevicesStore((state) =>
@@ -16,6 +18,8 @@ export const DeviceCard = memo(function DeviceCard({ id }: { id: string }) {
 });
 
 function DeviceRow({ device }: { device: Device }) {
+  const availability = useAvailabilityStore(state => state.results[device.id]?.status);
+  const availabilityLabel = availability === 'online' ? 'Online' : availability === 'unreachable' ? 'Not reachable' : 'Unknown';
   const { width, fontScale } = useWindowDimensions();
   const stacked = width < 360 || fontScale >= 1.3;
   const group = useDevicesStore(
@@ -31,7 +35,7 @@ function DeviceRow({ device }: { device: Device }) {
       <View className={stacked ? "gap-3" : "flex-row items-center gap-3"}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Details for ${device.name}`}
+          accessibilityLabel={`Details for ${device.name}. Availability: ${availabilityLabel}.`}
           onPress={() =>
             router.push({ pathname: "/device/[id]", params: { id: device.id } })
           }
@@ -51,6 +55,7 @@ function DeviceRow({ device }: { device: Device }) {
                 {[group, profile].filter(Boolean).join(" · ")}
               </Text>
             ) : null}
+            <DeviceAvailability device={device} />
             <Text
               accessibilityLiveRegion="polite"
               className={
