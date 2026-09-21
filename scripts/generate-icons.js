@@ -1,7 +1,6 @@
 /* global __dirname, Buffer */
 /** Raster exports come from the editable SVG, never the other way around.
- * Run with `node scripts/generate-icons.js` and sharp available on NODE_PATH
- * (or installed locally with `npm install --no-save --package-lock=false sharp`).
+ * Run with `node scripts/generate-icons.js` after `npm ci --include=dev`.
  * Add --android to refresh the existing generated Android project's resources.
  */
 const fs = require("node:fs/promises");

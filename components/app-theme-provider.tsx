@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ThemeProvider } from "@react-navigation/native";
+import { ThemeProvider } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { useColorScheme } from "nativewind";

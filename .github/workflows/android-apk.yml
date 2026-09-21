@@ -42,6 +42,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --include=dev
 
+      - name: Check types, lint, and regression tests
+        run: |
+          npx tsc --noEmit
+          npm run lint
+          npm test
+
       - name: Check Metro configuration and native styling dependencies
         run: node -e "require('./metro.config.js')"
 

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Image, Linking, Platform, Share, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Screen } from "@/components/screen";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused } from "expo-router/react-navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";

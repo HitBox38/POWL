@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "expo-router/react-navigation";
 
 // Local SVG assets keep the original mark crisp without a runtime SVG library.
 const sources = {

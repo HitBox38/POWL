@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Switch, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "expo-router/react-navigation";
 import {
   Screen,
   Section,

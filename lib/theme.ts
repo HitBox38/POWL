@@ -1,4 +1,4 @@
-import { Theme } from "@react-navigation/native";
+import { Theme } from "expo-router/react-navigation";
 
 const NAV_THEME = {
   light: {

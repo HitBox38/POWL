@@ -58,13 +58,13 @@ To build the next version, commit your changes on `dev` and push:
 git push origin dev
 ```
 
-The workflow uses `npm ci` with `package-lock.json`; update that lockfile when changing dependencies.
+The workflow uses `npm ci` with `package-lock.json`; update that lockfile when changing dependencies. npm is the project's package manager; do not generate a second lockfile with pnpm or Yarn.
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 22 and npm (matching the APK workflow).
+- Node.js 22.13+ or 24.3+ and npm (the APK workflow uses Node.js 22).
 - An Android development environment with Android Studio, the Android SDK, and a compatible JDK.
 - An Android device with USB debugging enabled for testing real Wake-on-LAN behavior on your network.
 
@@ -92,10 +92,19 @@ Native module changes require rebuilding the Android app.
 
 ```sh
 npm run lint
-npx tsc --noEmit
+npm run typecheck
+npm test
 ```
 
-There is no unified test script in `package.json`; focused checks live in `scripts/`, `plugins/`, and the native module test directory. End-to-end wake behavior needs verification with an Android device and a Wake-on-LAN-capable computer on the same network.
+`npm test` runs the focused JavaScript checks for validation, device transfer, persistence, wake requests, and config plugins. Kotlin tests live in the native module test directory and run with `:wol-sender:testDebugUnitTest` from the generated Android project. End-to-end wake behavior needs verification with an Android device and a Wake-on-LAN-capable computer on the same network.
+
+If a long Android build exhausts JVM Metaspace, run the Kotlin tests separately with more memory. From `android/` in PowerShell:
+
+```powershell
+./gradlew.bat :wol-sender:testDebugUnitTest --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g' '-Pkotlin.compiler.execution.strategy=in-process'
+```
+
+The optional icon-generation script uses the pinned `sharp` dev dependency: run `node scripts/generate-icons.js` after installing dependencies.
 
 ## How it works
 
@@ -116,7 +125,16 @@ The `withWolSender` Expo config plugin adds the Android `INTERNET` and `CHANGE_W
 | `plugins/withWolSender.js` | Android permissions config plugin used by Expo. |
 | `assets/images/` | App icons, splash assets, and branding. |
 
-The app uses Expo SDK 54, React Native 0.81, React 19, Expo Router, NativeWind, and Zustand.
+The app uses Expo SDK 57, React Native 0.86, React 19.2, Expo Router, NativeWind 4, and Zustand 5.
+
+## Dependency maintenance
+
+- Upgrade Expo one SDK at a time and align native packages with `npx expo install --fix`. Use `npx expo install --check` and `npx expo-doctor` to check compatibility. Rebuild the APK after native dependency changes.
+- AsyncStorage 3 is intentional: `expo.install.exclude` prevents Expo's compatibility alignment from replacing it with the older 2.x version. Keep `withAsyncStorageRepository` for its bundled Android Maven repository and verify persistence across app upgrades.
+- Keep NativeWind 4 with Tailwind CSS 3 and tailwind-merge 2. Moving to NativeWind 5 / Tailwind 4 requires a separate styling migration.
+- Keep ESLint 9 while its React/import plugins require it, and TypeScript 6 while typescript-eslint requires TypeScript below 6.1.
+- Navigation hooks, themes, and tab types come from `expo-router` entry points. Do not reintroduce application imports from `@react-navigation/*`.
+- React Compiler is enabled through `experiments.reactCompiler`; `babel-preset-expo` configures its Babel plugin.
 
 ## Navigation and compatibility
 
