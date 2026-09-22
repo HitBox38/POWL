@@ -35,7 +35,8 @@ const buttonVariants = cva(
           Platform.select({ web: "hover:bg-secondary/80" }),
         ),
         ghost: cn(
-          "active:bg-accent dark:active:bg-accent/50",
+          // Reanimated needs a resting color to clear the pressed background.
+          "bg-transparent active:bg-accent dark:active:bg-accent/50",
           Platform.select({ web: "hover:bg-accent dark:hover:bg-accent/50" }),
         ),
         link: "",
