@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test scripts/test-wake-store.cjs scripts/test-device-hydration.cjs scripts/network-profiles.test.mjs scripts/device-form.test.mjs scripts/test-device-transfer.mjs scripts/availability.test.mjs plugins/withWolSender.test.cjs plugins/withAsyncStorageRepository.test.cjs"
+    "test": "node --experimental-strip-types --test scripts/test-wake-store.cjs scripts/test-device-hydration.cjs scripts/network-profiles.test.mjs scripts/device-form.test.mjs scripts/test-device-transfer.mjs scripts/availability.test.mjs scripts/wake-session.test.mjs plugins/withWolSender.test.cjs plugins/withAsyncStorageRepository.test.cjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.1.1",

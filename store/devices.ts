@@ -26,6 +26,7 @@ export type Device = {
   broadcastIp: string;
   networkProfileId?: string;
   statusTarget?: StatusTarget;
+  connectionUrl?: string;
   isFavorite?: boolean;
   groupId?: string;
   /** Sending is transient; restart restores only the last completed result. */
@@ -46,14 +47,14 @@ type DevicesState = {
     >,
   ) => string;
   addDevices: (
-    devices: Pick<Device, "name" | "macAddress" | "broadcastIp" | "statusTarget">[],
+    devices: Pick<Device, "name" | "macAddress" | "broadcastIp" | "statusTarget" | "connectionUrl">[],
   ) => void;
   removeDevice: (id: string) => void;
   removeNetworkProfile: (id: string) => void;
   updateDevice: (
     id: string,
     updates: Partial<
-      Pick<Device, "name" | "macAddress" | "broadcastIp" | "networkProfileId" | "statusTarget">
+      Pick<Device, "name" | "macAddress" | "broadcastIp" | "networkProfileId" | "statusTarget" | "connectionUrl">
     >,
   ) => void;
   setWakeStatus: (id: string, status: WakeStatus, error?: string) => void;

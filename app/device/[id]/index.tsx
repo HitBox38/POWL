@@ -146,6 +146,12 @@ function DeviceDetails({ device }: { device: Device }) {
       </Section>
       <View>
         <SettingsRow
+          icon="open-in-new"
+          title="Wake → connect"
+          detail={device.connectionUrl ? "Wake, wait, then open your connection" : "Set up a dashboard or app link"}
+          onPress={() => router.push({ pathname: "/device/[id]/connect", params: { id: device.id } })}
+        />
+        <SettingsRow
           icon="history"
           title="Wake history"
           onPress={() =>

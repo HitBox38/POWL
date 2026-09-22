@@ -15,6 +15,11 @@ Built with Expo, React Native, and TypeScript, with a Kotlin module for sending 
 - Review per-device wake history and setup/troubleshooting help.
 - Import/export device backups, transfer a device by QR code, and configure the Android home-screen widget.
 - Choose System, Light, or Dark appearance.
+- Wake → connect: save a dashboard URL or supported app link on a device, wake it, wait for a fresh status response, and explicitly open the connection.
+
+### Wake → connect
+
+Open a device → **Wake → connect**, save an `http://`, `https://`, or supported app `scheme://` link, and configure status checks while the computer is awake. **Wake and wait** sends the request and waits up to one minute for a fresh response, then offers **Open connection**. App links require a compatible installed app and its documented URL format. Keep POWL open: leaving the screen, backgrounding, or changing networks cancels the wait. A timeout does not prove that the computer is off. Links are included in backups and QR transfers, and are never opened automatically.
 
 **“Packet sent!” means the packet was sent, not that the computer is online.** Optional status checks independently show **Online**, **Not reachable**, or **Unknown** while POWL is open.
 
