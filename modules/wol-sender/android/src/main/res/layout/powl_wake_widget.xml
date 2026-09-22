@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:padding="16dp" android:background="@drawable/powl_widget_background">
-    <TextView android:id="@+id/powl_widget_name" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="@string/powl_widget_unconfigured" android:textColor="#F7F7F2" android:textSize="18sp" android:textStyle="bold"
-        android:maxLines="2" android:ellipsize="end" />
-    <TextView android:id="@+id/powl_widget_status" android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:gravity="center_vertical" android:text="@string/powl_widget_setup"
-        android:textColor="#B3BDB6" android:textSize="14sp" android:maxLines="2" />
-    <Button android:id="@+id/powl_widget_wake" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:minHeight="48dp" android:text="@string/powl_widget_wake" android:textAllCaps="false"
-        android:backgroundTint="#8DD5BC" android:textColor="#161D1A" android:textSize="16sp" />
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:paddingStart="12dp" android:paddingEnd="8dp" android:background="@drawable/powl_widget_background">
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+        android:layout_weight="1" android:layout_marginEnd="8dp" android:orientation="vertical">
+        <TextView android:id="@+id/powl_widget_name" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/powl_widget_unconfigured" android:textColor="#F7F7F2" android:textSize="16sp" android:textStyle="bold"
+            android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/powl_widget_status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/powl_widget_setup" android:textColor="#B3BDB6" android:textSize="12sp"
+            android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <Button android:id="@+id/powl_widget_wake" android:layout_width="wrap_content" android:layout_height="48dp"
+        android:minWidth="64dp" android:minHeight="48dp" android:paddingStart="12dp" android:paddingEnd="12dp"
+        android:text="@string/powl_widget_wake" android:textAllCaps="false" android:maxLines="1" android:ellipsize="end"
+        android:backgroundTint="#8DD5BC" android:textColor="#161D1A" android:textSize="14sp" />
 </LinearLayout>
