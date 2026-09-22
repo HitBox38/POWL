@@ -16,11 +16,18 @@ Built with Expo, React Native, and TypeScript, with a Kotlin module for sending 
 - Follow the Windows/Linux/other setup walkthrough, then use per-device guided diagnosis to check network access, verify status while awake, and run a sleep-to-wake test. Firmware and power settings require checking on the computer itself.
 - Import/export device backups, transfer a device by QR code, and configure the Android home-screen widget.
 - Choose System, Light, or Dark appearance.
+- Configure a native Android Quick Settings wake tile and launcher shortcuts for favorites in Settings → Quick access.
 - Wake → connect: save a dashboard URL or supported app link on a device, wake it, wait for a fresh status response, and explicitly open the connection.
 
 ### Wake → connect
 
 Open a device → **Wake → connect**, save an `http://`, `https://`, or supported app `scheme://` link, and configure status checks while the computer is awake. **Wake and wait** sends the request and waits up to one minute for a fresh response, then offers **Open connection**. App links require a compatible installed app and its documented URL format. Keep POWL open: leaving the screen, backgrounding, or changing networks cancels the wait. A timeout does not prove that the computer is off. Links are included in backups and QR transfers, and are never opened automatically.
+
+### Android quick access
+
+Rebuild the Android app to include the native tile and shortcut activity. In **Settings → Quick access**, select a tile device and tap **Add Quick Settings tile** (Android 13+), or add **POWL Wake** from the panel’s Edit menu. The tile prompts for unlock when needed. Favorite devices appear when long-pressing the POWL launcher icon: up to four, subject to the launcher’s limit. Supported launchers can pin these shortcuts. Removing a device or favorite disables its pinned shortcut on the next native sync.
+
+Both actions work on a cold start without React Native. They read destinations from private native storage, respect the last selected network profile, and require a local Wi-Fi/Ethernet connection without an active VPN. Profiles remain manual: local connectivity does not prove you are on the target subnet. Results appear in Android toasts/the tile, separately from app wake history. A sent packet never confirms a wake. Changes sync while POWL is open; a sync error in Quick access can be retried by reopening the app.
 
 **“Packet sent!” means the packet was sent, not that the computer is online.** Optional status checks independently show **Online**, **Not reachable**, or **Unknown** while POWL is open.
 

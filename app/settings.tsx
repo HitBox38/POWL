@@ -37,6 +37,12 @@ export default function SettingsScreen() {
             detail="Wake without opening POWL"
             onPress={() => router.push("/widget")}
           />
+          <SettingsRow
+            icon="bolt"
+            title="Quick access"
+            detail="Quick Settings tile and favorite shortcuts"
+            onPress={() => router.push("/quick-access")}
+          />
         </View>
       </Section>
       <Section title="Help">

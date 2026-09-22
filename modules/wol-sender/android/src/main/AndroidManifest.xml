@@ -1,3 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <application>
+        <service android:name=".WakeTileService" android:label="POWL Wake"
+            android:icon="@drawable/powl_quick_wake" android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <activity android:name=".WakeShortcutActivity" android:exported="true"
+            android:excludeFromRecents="true" android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:label="POWL Wake" />
+    </application>
 </manifest>

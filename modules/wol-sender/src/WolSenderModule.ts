@@ -6,6 +6,8 @@ interface WolSenderNativeModule {
   sendMagicPacket(macAddress: string, broadcastIp: string): Promise<void>;
   syncWakeWidget?(id: string | null, name: string | null, macAddress: string | null, broadcastIp: string | null): Promise<void>;
   requestPinWakeWidget?(): Promise<boolean>;
+  syncQuickActions?(config: string): Promise<void>;
+  requestAddWakeTile?(): Promise<boolean>;
   startAvailabilityNetwork?(): Promise<void>;
   stopAvailabilityNetwork?(): Promise<void>;
   startAvailabilityDiscovery?(sessionId: string, types: string[]): Promise<void>;

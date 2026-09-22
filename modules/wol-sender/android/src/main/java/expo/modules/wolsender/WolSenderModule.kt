@@ -3,6 +3,8 @@ package expo.modules.wolsender
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.os.Build
+import android.app.StatusBarManager
+import android.graphics.drawable.Icon
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.Promise
@@ -32,6 +34,30 @@ class WolSenderModule : Module() {
         AsyncFunction("syncWakeWidget") { id: String?, name: String?, macAddress: String?, broadcastIp: String? ->
             val context = requireNotNull(appContext.reactContext) { "App context is unavailable" }
             WakeWidgetProvider.configure(context, id, name, macAddress, broadcastIp)
+        }
+
+        AsyncFunction("syncQuickActions") { config: String ->
+            val context = requireNotNull(appContext.reactContext) { "App context is unavailable" }
+            QuickWakeActions.sync(context, config)
+        }
+
+        AsyncFunction("requestAddWakeTile") { promise: Promise ->
+            val activity = appContext.currentActivity
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || activity == null) promise.resolve(false)
+            else {
+                activity.runOnUiThread {
+                    try {
+                        val manager = activity.getSystemService(StatusBarManager::class.java)
+                        if (manager == null) promise.resolve(false)
+                        else manager.requestAddTileService(
+                            ComponentName(activity, WakeTileService::class.java), "POWL Wake",
+                            Icon.createWithResource(activity, R.drawable.powl_quick_wake),
+                            activity.mainExecutor
+                        ) { result -> promise.resolve(result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
+                            result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED) }
+                    } catch (_: Exception) { promise.resolve(false) }
+                }
+            }
         }
 
         AsyncFunction("requestPinWakeWidget") {
