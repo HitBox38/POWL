@@ -13,6 +13,7 @@ Built with Expo, React Native, and TypeScript, with a Kotlin module for sending 
 - Retry failed sends and remove saved devices with confirmation.
 - Favorite and group devices, wake a group, and select saved network profiles manually.
 - Review per-device wake history and setup/troubleshooting help.
+- Follow the Windows/Linux/other setup walkthrough, then use per-device guided diagnosis to check network access, verify status while awake, and run a sleep-to-wake test. Firmware and power settings require checking on the computer itself.
 - Import/export device backups, transfer a device by QR code, and configure the Android home-screen widget.
 - Choose System, Light, or Dark appearance.
 - Wake → connect: save a dashboard URL or supported app link on a device, wake it, wait for a fresh status response, and explicitly open the connection.
